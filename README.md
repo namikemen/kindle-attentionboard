@@ -6,6 +6,20 @@ Inspired by [alexishida/kindle-dashboard](https://github.com/alexishida/kindle-d
 
 ---
 
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/tabs/tab1.png" width="270" alt="Tab 1 — Schedule &amp; Tasks"><br><sub><b>Tab 1</b> — Schedule &amp; Tasks</sub></td>
+    <td align="center"><img src="docs/tabs/tab2.png" width="270" alt="Tab 2 — Now Playing &amp; AI"><br><sub><b>Tab 2</b> — Now Playing &amp; AI</sub></td>
+    <td align="center"><img src="docs/tabs/tab3.png" width="270" alt="Tab 3 — System &amp; Devices"><br><sub><b>Tab 3</b> — System &amp; Devices</sub></td>
+  </tr>
+</table>
+
+<sub>Rendered at `1236×1648` with `DEMO_MODE=1`: all names, events, devices, and metrics are fictional.</sub>
+
+---
+
 ## 3-Tab Dashboard Layout (`1236×1648`)
 
 Every tab shares a persistent top header (**Big Clock**, **Date & Host Uptime**, **Live Open-Meteo Weather** with temperature, feels-like, high/low, humidity, wind speed, and precipitation probability) and an interactive **3-Tab Switcher Bar**:
@@ -186,6 +200,10 @@ KINDLE_HEIGHT=1648
 
 # Band height for tile-diff updates (default: 190)
 # TILE_HEIGHT=190
+
+# Screenshots / UI work: serve fictional data instead of the host's real
+# calendar, weather, media, and devices.
+# DEMO_MODE=1
 ```
 
 ---
