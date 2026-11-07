@@ -8,6 +8,7 @@ import { getNowPlaying, NowPlayingTrack } from '../collectors/musicCollector';
 import { getWeatherData, WeatherData } from '../collectors/weatherCollector';
 import { timerManager, TimerState } from '../collectors/timerManager';
 import { config } from '../config';
+import { buildDemoDashboard } from './demoData';
 
 export interface DashboardPayload {
   schedule: ScheduleData;
@@ -25,6 +26,12 @@ export interface DashboardPayload {
 }
 
 export async function gatherDashboardData(): Promise<DashboardPayload> {
+  // Screenshot / UI work mode: return fictional data instead of touching the
+  // host's calendar, location, media and devices.
+  if (process.env.DEMO_MODE === '1') {
+    return buildDemoDashboard();
+  }
+
   const [schedule, agents, system, devices, music, weather] = await Promise.all([
     getSchedule(),
     getAgentTelemetry(),
@@ -201,7 +208,13 @@ export function renderDashboardHtml(
   html = html.replace('{{DATE}}', data.clock.date);
   html = html.replace('{{UPTIME_HOURS}}', String(data.system.uptimeHours));
   html = html.replace(/{{CPU_CORES}}/g, String(data.system.cpuCores));
-  html = html.replace('{{AUTO_REFRESH_SECONDS}}', autoRefresh ? String(config.refreshSeconds) : '0');
+  if (autoRefresh) {
+    html = html.replace('{{AUTO_REFRESH_SECONDS}}', String(config.refreshSeconds));
+  } else {
+    // A refresh of 0 would make headless Chrome reload forever and never
+    // produce a screenshot, so drop the tag entirely for static renders.
+    html = html.replace(/[ \t]*<meta http-equiv="refresh"[^>]*>\r?\n?/, '');
+  }
 
   // 2. Weather
   html = html.replace('{{TEMP}}', `${data.weather.temperature}${data.weather.unit}`);

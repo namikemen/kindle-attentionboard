@@ -81,12 +81,14 @@ export async function generateKindleSnapshot(force: boolean = false, tabOverride
     return cached.buffer;
   }
 
-  const tabTempPath = path.resolve(`/tmp/kindle-attentionboard-tab${targetTab}.png`);
+  // Unique temp file per render. Two server instances (or a stale file from a
+  // previous failed run) must never make us return an older frame.
+  const tabTempPath = path.resolve(`/tmp/kindle-attentionboard-tab${targetTab}-${process.pid}-${now}.png`);
   const renderUrl = `http://127.0.0.1:${config.port}/render?tab=${targetTab}`;
   const chromeCmd = `"${config.chromePath}" --headless=new --disable-gpu --hide-scrollbars --window-size=${config.kindleWidth},${config.kindleHeight} --screenshot="${tabTempPath}" "${renderUrl}"`;
 
   try {
-    await execAsync(chromeCmd, { timeout: 8000 });
+    await execAsync(chromeCmd, { timeout: 15000 });
     if (fs.existsSync(tabTempPath)) {
       const buf = fs.readFileSync(tabTempPath);
       cachedByTab.set(targetTab, { buffer: buf, timestamp: now });
@@ -98,9 +100,19 @@ export async function generateKindleSnapshot(force: boolean = false, tabOverride
           // Ignore copy errors
         }
       }
+      try {
+        fs.unlinkSync(tabTempPath);
+      } catch {
+        // Ignore cleanup errors
+      }
       return buf;
     }
   } catch (err) {
+    try {
+      fs.unlinkSync(tabTempPath);
+    } catch {
+      // Ignore cleanup errors
+    }
     if (cached) return cached.buffer;
     throw new Error(`Headless snapshot generation failed: ${err instanceof Error ? err.message : String(err)}`);
   }
