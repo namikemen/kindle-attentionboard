@@ -329,93 +329,135 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
   }
 
   try {
-    const query = `
-      SELECT 
-        count(*),
-        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
-        COALESCE(sum(json_extract(data, '$.cost')), 0),
-        COALESCE(sum(json_extract(data, '$.tokens.cache.read')), 0),
-        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.cache.read')), 0)
-      FROM message
-      WHERE time_created >= ${startOfTodayMs};
-      SELECT count(*)
-      FROM part
-      WHERE json_extract(data, '$.type') = 'tool' AND time_created >= ${startOfTodayMs};
-      SELECT t.content, t.status, s.title, s.directory, s.model, s.agent
-      FROM todo t
-      JOIN session s ON t.session_id = s.id
-      WHERE t.status = 'in_progress'
-      ORDER BY t.time_updated DESC
-      LIMIT 1;
-      SELECT s.id, s.title, s.directory, s.agent, s.model, s.time_updated
-      FROM session s
-      ORDER BY s.time_updated DESC
-      LIMIT 1;
-      SELECT 
-        date(time_created / 1000, 'unixepoch', 'localtime') AS day,
-        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
-        COALESCE(sum(json_extract(data, '$.cost')), 0)
-      FROM message
-      GROUP BY 1
-      ORDER BY 1 DESC
-      LIMIT 90;
-    `;
+    // Check if OpenCode 2 (session_v2) exists
+    const { stdout: verCheck } = await execAsync(
+      `sqlite3 "file:${dbPath}?mode=ro" "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='session_v2';"`
+    );
+    const isOpenCode2 = parseInt(verCheck.trim(), 10) > 0;
+
+    let query = '';
+    if (isOpenCode2) {
+      query = `
+        SELECT 
+          COALESCE(sum(tokens_input + tokens_output + tokens_cache_read), 0),
+          COALESCE(sum(cost), 0),
+          COALESCE(sum(tokens_cache_read), 0),
+          COALESCE(sum(tokens_input + tokens_cache_read), 0)
+        FROM session_v2
+        WHERE time_updated >= ${startOfTodayMs};
+
+        SELECT 
+          count(*),
+          COALESCE(sum(CASE WHEN type = 'assistant' THEN 1 ELSE 0 END), 0)
+        FROM session_message
+        WHERE time_created >= ${startOfTodayMs};
+
+        SELECT count(*)
+        FROM session_message m, json_each(json_extract(m.data, '$.content')) c
+        WHERE json_extract(c.value, '$.type') = 'tool'
+          AND m.time_created >= ${startOfTodayMs};
+
+        SELECT 
+          s.id,
+          COALESCE(s.title, 'Active Session'),
+          COALESCE(s.directory, 'Workspace'),
+          COALESCE(s.agent, 'orchestrator'),
+          COALESCE(s.model, ''),
+          s.time_updated,
+          COALESCE(t.content, ''),
+          COALESCE(t.status, '')
+        FROM session_v2 s
+        LEFT JOIN todo t ON t.session_id = s.id AND t.status IN ('in_progress', 'pending')
+        ORDER BY s.time_updated DESC
+        LIMIT 1;
+
+        SELECT 
+          date(time_updated / 1000, 'unixepoch', 'localtime') AS day,
+          COALESCE(sum(tokens_input + tokens_output + tokens_cache_read), 0),
+          COALESCE(sum(cost), 0)
+        FROM session_v2
+        GROUP BY 1
+        ORDER BY 1 DESC
+        LIMIT 90;
+      `;
+    } else {
+      query = `
+        SELECT 
+          COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
+          COALESCE(sum(json_extract(data, '$.cost')), 0),
+          COALESCE(sum(json_extract(data, '$.tokens.cache.read')), 0),
+          COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.cache.read')), 0)
+        FROM message
+        WHERE time_created >= ${startOfTodayMs};
+
+        SELECT 
+          count(*),
+          COALESCE(sum(CASE WHEN json_extract(data, '$.role') = 'assistant' THEN 1 ELSE 0 END), 0)
+        FROM message
+        WHERE time_created >= ${startOfTodayMs};
+
+        SELECT count(*)
+        FROM part
+        WHERE json_extract(data, '$.type') = 'tool' AND time_created >= ${startOfTodayMs};
+
+        SELECT 
+          s.id,
+          COALESCE(s.title, 'Active Session'),
+          COALESCE(s.directory, 'Workspace'),
+          COALESCE(s.agent, 'agent'),
+          COALESCE(s.model, ''),
+          s.time_updated,
+          COALESCE(t.content, ''),
+          COALESCE(t.status, '')
+        FROM session s
+        LEFT JOIN todo t ON t.session_id = s.id AND t.status IN ('in_progress', 'pending')
+        ORDER BY s.time_updated DESC
+        LIMIT 1;
+
+        SELECT 
+          date(time_created / 1000, 'unixepoch', 'localtime') AS day,
+          COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
+          COALESCE(sum(json_extract(data, '$.cost')), 0)
+        FROM message
+        GROUP BY 1
+        ORDER BY 1 DESC
+        LIMIT 90;
+      `;
+    }
 
     const { stdout } = await execAsync(`sqlite3 "file:${dbPath}?mode=ro" "${query.replace(/\n\s+/g, ' ')}"`, {
       timeout: 2500,
     });
 
     const lines = stdout.trim().split('\n').map((l) => l.trim());
-    if (lines.length >= 2) {
+    if (lines.length >= 3) {
+      // Line 1: Tokens & Cost
       const statsParts = lines[0].split('|');
-      result.todayMessages = parseInt(statsParts[0], 10) || 0;
-      result.todayTokens = Math.round(parseFloat(statsParts[1]) || 0);
-      result.estimatedCostUsd = parseFloat((parseFloat(statsParts[2]) || 0).toFixed(2));
-      result.cacheTokens = Math.round(parseFloat(statsParts[3]) || 0);
-      result.promptTokens = Math.round(parseFloat(statsParts[4]) || 0);
+      result.todayTokens = Math.round(parseFloat(statsParts[0]) || 0);
+      result.estimatedCostUsd = parseFloat((parseFloat(statsParts[1]) || 0).toFixed(2));
+      result.cacheTokens = Math.round(parseFloat(statsParts[2]) || 0);
+      result.promptTokens = Math.round(parseFloat(statsParts[3]) || 0);
 
-      result.todayToolCalls = parseInt(lines[1], 10) || 0;
+      // Line 2: Messages
+      const msgParts = lines[1].split('|');
+      result.todayMessages = parseInt(msgParts[1] || msgParts[0], 10) || 0;
+
+      // Line 3: Tool Calls
+      result.todayToolCalls = parseInt(lines[2], 10) || 0;
     }
 
-    // Line 3: in_progress task (if any)
-    if (lines.length >= 3 && lines[2]) {
-      const parts = lines[2].split('|');
-      if (parts.length >= 4) {
-        const content = parts[0];
-        const status = parts[1] as 'in_progress' | 'pending';
-        const sessionTitle = parts[2] || 'Active Session';
-        const directory = parts[3] || 'Workspace';
-        let modelName = 'opencode';
-        let agentRole = parts[5] || 'agent';
-
-        try {
-          const modelObj = JSON.parse(parts[4]);
-          if (modelObj && modelObj.id) modelName = modelObj.id;
-        } catch {
-          if (parts[4]) modelName = parts[4];
-        }
-
-        result.activeTask = {
-          sessionTitle,
-          projectName: path.basename(directory),
-          taskTitle: content,
-          taskStatus: status,
-          modelName,
-          agentRole,
-        };
-        result.primaryModel = modelName;
-      }
-    }
-
-    // Line 4: latest session (fallback if no active in_progress task)
-    if (!result.activeTask && lines.length >= 4 && lines[3]) {
+    // Line 4: Active Session & Task
+    if (lines.length >= 4 && lines[3]) {
       const parts = lines[3].split('|');
-      if (parts.length >= 3) {
-        const sessionTitle = parts[1] || 'Standby';
+      if (parts.length >= 6) {
+        const sessionTitle = parts[1] || 'Active Session';
         const directory = parts[2] || 'Workspace';
-        const agentRole = parts[3] || 'agent';
-        let modelName = 'opencode';
+        const agentRole = parts[3] || 'orchestrator';
+        const timeUpdated = parseInt(parts[5], 10) || 0;
+        const todoContent = parts[6] || '';
+        const todoStatus = (parts[7] || '') as 'in_progress' | 'pending';
 
+        let modelName = 'opencode';
         try {
           const modelObj = JSON.parse(parts[4]);
           if (modelObj && modelObj.id) modelName = modelObj.id;
@@ -423,27 +465,46 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
           if (parts[4]) modelName = parts[4];
         }
 
+        const isRecent = Date.now() - timeUpdated < 20 * 60 * 1000;
+        const taskTitle = todoContent || (isRecent ? 'Active Agent Execution' : 'Session ready for prompt');
+        const taskStatus = todoStatus || (isRecent ? 'in_progress' : 'idle');
+
         result.activeTask = {
           sessionTitle,
           projectName: path.basename(directory),
-          taskTitle: 'Session ready for prompt',
-          taskStatus: 'idle',
+          taskTitle,
+          taskStatus,
           modelName,
           agentRole,
         };
         result.primaryModel = modelName;
+
+        // If cost is 0 (free tier or provider reporting 0), calculate market API value
+        if (result.estimatedCostUsd === 0 && result.todayTokens > 0) {
+          const calculated = calculateTokenCost({
+            inputTokens: Math.max(0, result.promptTokens - result.cacheTokens),
+            outputTokens: Math.max(0, result.todayTokens - result.promptTokens),
+            cacheReadTokens: result.cacheTokens,
+            cacheWriteTokens: 0,
+            modelName,
+          });
+          result.estimatedCostUsd = calculated.estimatedCostUsd;
+        }
       }
     }
 
-    // Line 5+: historical days
+    // Line 5+: historical daily totals
     for (let i = 4; i < lines.length; i++) {
       const line = lines[i];
       if (!line) continue;
       const parts = line.split('|');
-      if (parts.length >= 3) {
+      if (parts.length >= 2) {
         const day = parts[0];
         const tokens = Math.round(parseFloat(parts[1]) || 0);
-        const cost = parseFloat(parts[2]) || 0;
+        let cost = parseFloat(parts[2]) || 0;
+        if (cost === 0 && tokens > 0) {
+          cost = parseFloat(((tokens / 1_000_000) * 1.5).toFixed(2));
+        }
         if (day && tokens > 0) {
           historyMap.set(day, { tokens, cost });
         }
