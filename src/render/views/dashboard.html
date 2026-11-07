@@ -142,35 +142,53 @@
         <span class="card-badge">{{ACTIVE_AGENT_COUNT}} Running • {{PRIMARY_MODEL}}</span>
       </div>
 
-      <!-- AI Token & Session Telemetry Banner (Inside AI Card) -->
+      <!-- Vorssaint AI Telemetry & Cache Efficiency Banner -->
       <div class="ai-telemetry-banner">
         <div class="ai-stat-box">
-          <span class="ai-stat-val">{{TODAY_TOKENS}}</span>
-          <span class="ai-stat-lbl">Tokens Today</span>
-        </div>
-        <div class="ai-stat-box">
           <span class="ai-stat-val">${{TODAY_COST}}</span>
-          <span class="ai-stat-lbl">Est. Cost</span>
+          <span class="ai-stat-lbl">API Spend</span>
         </div>
         <div class="ai-stat-box">
-          <span class="ai-stat-val">{{TODAY_MESSAGES}}</span>
-          <span class="ai-stat-lbl">Messages</span>
+          <span class="ai-stat-val">{{CACHE_HIT_RATE}}%</span>
+          <span class="ai-stat-lbl">Cache Hit</span>
         </div>
         <div class="ai-stat-box">
-          <span class="ai-stat-val">{{CLAUDE_CALLS}}</span>
-          <span class="ai-stat-lbl">Tool Calls</span>
+          <span class="ai-stat-val">${{CACHE_SAVINGS}}</span>
+          <span class="ai-stat-lbl">Saved ($)</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-val">{{TODAY_TOKENS}}</span>
+          <span class="ai-stat-lbl">Total Tokens</span>
         </div>
       </div>
 
       <!-- Live Active Task / Session Focus Banner -->
       {{ACTIVE_TASK_HTML}}
 
+      <!-- 7-Day Trend & 10-Week Activity Row -->
+      <div class="analytics-row">
+        <!-- 7-Day Trend Chart -->
+        {{TREND_CHART_HTML}}
+
+        <!-- 10-Week Activity Heatmap -->
+        {{ACTIVITY_MAP_HTML}}
+      </div>
+
+      <!-- Provider Distribution Multi-Bar -->
+      {{PROVIDER_SPLIT_HTML}}
+
       <!-- Active MCP Tool Bridges Strip -->
       {{MCP_BRIDGES_HTML}}
 
-      <!-- Running AI Agents Fleet List -->
-      <div class="agent-list-lg">
-        {{AGENTS_HTML}}
+      <!-- Compact Running AI Agents Fleet List -->
+      <div class="fleet-compact-card">
+        <div class="fleet-compact-header">
+          <span class="fleet-compact-title">⚡ FLEET RUNTIME</span>
+          <span class="fleet-compact-count">{{ACTIVE_AGENT_COUNT}} Processes</span>
+        </div>
+        <div class="fleet-compact-list">
+          {{AGENTS_HTML}}
+        </div>
       </div>
     </section>
   </main>

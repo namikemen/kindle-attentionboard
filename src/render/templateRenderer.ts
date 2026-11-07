@@ -1,7 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { getSchedule, ScheduleData, CalendarEvent, TaskItem } from '../collectors/tasksCollector';
-import { getAgentTelemetry, AgentTelemetry, ActiveTaskFocus } from '../collectors/agentCollector';
+import {
+  getAgentTelemetry,
+  AgentTelemetry,
+  ActiveTaskFocus,
+  TrendDay,
+  ActivityHeatmap,
+  ProviderBreakdown,
+  DetectedAgent,
+} from '../collectors/agentCollector';
 import { getSystemHealth, SystemHealth, TopAppUsage } from '../collectors/systemCollector';
 import { getAppleDevicesBattery, AppleDeviceBattery } from '../collectors/appleBatteryCollector';
 import { getNowPlaying, NowPlayingTrack } from '../collectors/musicCollector';
@@ -228,6 +236,136 @@ function renderMcpBridgesHtml(bridges: string[]): string {
   `;
 }
 
+function renderTrendChartHtml(days: TrendDay[]): string {
+  if (!days || days.length === 0) return '';
+
+  const columns = days
+    .map((d) => {
+      const todayClass = d.isToday ? ' trend-col-today' : '';
+      const barFillClass = d.isToday ? 'trend-bar-fill-today' : 'trend-bar-fill';
+      return `
+        <div class="trend-col${todayClass}">
+          <span class="trend-val">${escapeHtml(d.tokensFormatted)}</span>
+          <div class="trend-bar-track">
+            <div class="${barFillClass}" style="height: ${d.heightPercent}%;"></div>
+          </div>
+          <span class="trend-label">${escapeHtml(d.dayLabel)}</span>
+        </div>
+      `;
+    })
+    .join('');
+
+  return `
+    <div class="trend-section">
+      <div class="trend-header">
+        <span class="trend-title">📊 7-DAY TOKEN &amp; SPEND TREND</span>
+        <span class="trend-sub">Daily API Volume</span>
+      </div>
+      <div class="trend-chart-wrap">
+        ${columns}
+      </div>
+    </div>
+  `;
+}
+
+function renderActivityHeatmapHtml(activity: ActivityHeatmap): string {
+  if (!activity || !activity.weeks || activity.weeks.length === 0) return '';
+
+  const weekCols = activity.weeks
+    .map((w) => {
+      const cells = w
+        .map((c) => {
+          return `<div class="heatmap-cell level-${c.level}"></div>`;
+        })
+        .join('');
+      return `<div class="heatmap-col">${cells}</div>`;
+    })
+    .join('');
+
+  const activeDaysStr = `${activity.totalActiveDays}/70d Active`;
+  const totalTokensStr = `${formatTokens(activity.totalTokens)} (10 Wks)`;
+
+  return `
+    <div class="activity-section">
+      <div class="activity-header">
+        <span class="activity-title">🟩 10-WEEK ACTIVITY MAP</span>
+        <span class="activity-stats">${activeDaysStr} • ${totalTokensStr}</span>
+      </div>
+      <div class="activity-body">
+        <div class="heatmap-days-legend">
+          <span>M</span>
+          <span>W</span>
+          <span>F</span>
+          <span>S</span>
+        </div>
+        <div class="heatmap-grid">
+          ${weekCols}
+        </div>
+        <div class="heatmap-levels-legend">
+          <span class="legend-text">Less</span>
+          <div class="heatmap-cell level-0"></div>
+          <div class="heatmap-cell level-1"></div>
+          <div class="heatmap-cell level-2"></div>
+          <div class="heatmap-cell level-3"></div>
+          <span class="legend-text">More</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderProviderSplitHtml(p: ProviderBreakdown): string {
+  if (!p) return '';
+  const cPct = Math.max(0, p.claudePercent);
+  const oPct = Math.max(0, p.openCodePercent);
+  const otherPct = Math.max(0, 100 - cPct - oPct);
+
+  return `
+    <div class="provider-split-wrap">
+      <div class="provider-split-bar">
+        <div class="provider-seg-claude" style="width: ${cPct}%;"></div>
+        <div class="provider-seg-opencode" style="width: ${oPct}%;"></div>
+        <div class="provider-seg-other" style="width: ${otherPct}%;"></div>
+      </div>
+      <div class="provider-legend-row">
+        <span class="provider-legend-item"><span class="legend-swatch swatch-claude"></span>Claude (${cPct}%)</span>
+        <span class="provider-legend-item"><span class="legend-swatch swatch-opencode"></span>OpenCode (${oPct}%)</span>
+        <span class="provider-legend-item"><span class="legend-swatch swatch-other"></span>Antigravity/Local (${otherPct}%)</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderCompactFleetHtml(agents: DetectedAgent[]): string {
+  if (!agents || agents.length === 0) {
+    return `<div class="empty-state">No active agent processes</div>`;
+  }
+
+  return agents
+    .slice(0, 8)
+    .map((a) => {
+      const isBusy = a.status === 'busy';
+      const statusPill = isBusy
+        ? `<span class="agent-status-pill pill-busy">BUSY ⚡</span>`
+        : `<span class="agent-status-pill pill-idle">IDLE</span>`;
+      const procTag = a.processCount > 1 ? `${a.detail} • ${a.processCount}p` : a.detail;
+
+      return `
+        <div class="fleet-compact-row">
+          <div class="fleet-compact-left">
+            ${statusPill}
+            <span class="fleet-compact-name">${escapeHtml(a.name)}</span>
+            <span class="fleet-compact-tag">${escapeHtml(procTag)}</span>
+          </div>
+          <div class="fleet-compact-right">
+            <span class="fleet-compact-meta">${a.cpuPercent}% CPU • ${a.memoryMb}MB</span>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+}
+
 function getTemplatePath(): string {
   const localPath = path.resolve(__dirname, 'views/dashboard.html');
   if (fs.existsSync(localPath)) return localPath;
@@ -350,47 +488,20 @@ export function renderDashboardHtml(
     : `<div class="media-artwork-box"><span class="media-artwork-placeholder">💿</span></div>`;
   html = html.replace('{{MUSIC_ARTWORK_HTML}}', artworkHtml);
 
-  let agentsHtml = '';
-  if (data.agents.agents.length === 0) {
-    agentsHtml = `
-      <div class="agent-row-lg">
-        <div class="agent-left-lg">
-          <span class="agent-name-lg">🤖 Agent Fleet</span>
-        </div>
-        <span class="agent-meta-lg">Ready (Standby)</span>
-      </div>
-    `;
-  } else {
-    for (const a of data.agents.agents.slice(0, 6)) {
-      const isBusy = a.status === 'busy';
-      const statusBadge = isBusy
-        ? `<span class="agent-status-pill pill-busy">BUSY ⚡</span>`
-        : `<span class="agent-status-pill pill-idle">IDLE</span>`;
-      const procBadge = a.processCount > 1 ? `${a.detail} • ${a.processCount}p` : a.detail;
-      const barPct = Math.min(100, Math.max(8, Math.round(a.cpuPercent * 2.5 + (a.memoryMb / 1024) * 30)));
-      agentsHtml += `
-        <div class="agent-row-lg">
-          <div class="agent-left-lg">
-            ${statusBadge}
-            <span class="agent-name-lg">${escapeHtml(a.name)}</span>
-            <span class="agent-detail-pill-lg">${escapeHtml(procBadge)}</span>
-          </div>
-          <div class="agent-right-lg">
-            <div class="agent-bar-wrap">
-              <div class="progress-bar-fill" style="width: ${barPct}%;"></div>
-            </div>
-            <span class="agent-meta-lg">${a.cpuPercent}% CPU • ${a.memoryMb}MB</span>
-          </div>
-        </div>
-      `;
-    }
-  }
+  const compactFleetHtml = renderCompactFleetHtml(data.agents.agents);
+  html = html.replace('{{AGENTS_HTML}}', compactFleetHtml);
+
   html = html.replace('{{ACTIVE_TASK_HTML}}', renderActiveTaskHtml(data.agents.activeTask));
+  html = html.replace('{{TREND_CHART_HTML}}', renderTrendChartHtml(data.agents.trend7Days));
+  html = html.replace('{{ACTIVITY_MAP_HTML}}', renderActivityHeatmapHtml(data.agents.activityMap));
+  html = html.replace('{{PROVIDER_SPLIT_HTML}}', renderProviderSplitHtml(data.agents.providerBreakdown));
   html = html.replace('{{MCP_BRIDGES_HTML}}', renderMcpBridgesHtml(data.agents.mcpBridges));
-  html = html.replace('{{AGENTS_HTML}}', agentsHtml);
-  html = html.replace('{{ACTIVE_AGENT_COUNT}}', String(data.agents.totalRunningAgents));
+
+  html = html.replace(/{{ACTIVE_AGENT_COUNT}}/g, String(data.agents.totalRunningAgents));
   html = html.replace('{{TODAY_TOKENS}}', formatTokens(data.agents.claudeTokenStats.todayTokens));
   html = html.replace('{{TODAY_COST}}', data.agents.claudeTokenStats.estimatedCostUsd.toFixed(2));
+  html = html.replace('{{CACHE_HIT_RATE}}', String(data.agents.cacheEfficiency.hitRatePercent));
+  html = html.replace('{{CACHE_SAVINGS}}', data.agents.cacheEfficiency.savingsUsd.toFixed(2));
   html = html.replace('{{TODAY_MESSAGES}}', String(data.agents.claudeTokenStats.todayMessages));
   html = html.replace('{{CLAUDE_CALLS}}', String(data.agents.claudeTokenStats.todayToolCalls));
   html = html.replace(/{{PRIMARY_MODEL}}/g, escapeHtml(data.agents.claudeTokenStats.primaryModel));

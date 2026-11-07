@@ -393,11 +393,11 @@ body {
 /* TAB 2: NOW PLAYING & ACTIVE AI AGENTS (SEPARATED UI)                       */
 /* ========================================================================== */
 .tab2-media-card {
-  flex: 0.72;
+  flex: 0.65;
 }
 
 .tab2-agents-card {
-  flex: 1.28;
+  flex: 1.35;
 }
 
 .media-showcase {
@@ -667,19 +667,261 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Analytics Row: Trend & Activity Map side by side */
+.analytics-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.trend-section,
+.activity-section {
+  border: 2px solid var(--eink-black);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--eink-white);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.trend-header,
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.trend-title,
+.activity-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.trend-sub,
+.activity-stats {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.trend-chart-wrap {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 6px;
+  height: 104px;
+  padding-top: 4px;
+}
+
+.trend-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  height: 100%;
+  justify-content: flex-end;
+  gap: 3px;
+}
+
+.trend-val {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.trend-bar-track {
+  width: 100%;
+  max-width: 28px;
+  height: 68px;
+  background: var(--eink-gray-light);
+  border: 1.5px solid var(--eink-black);
+  border-radius: 3px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.trend-bar-fill {
+  width: 100%;
+  background: var(--eink-black);
+}
+
+.trend-bar-fill-today {
+  width: 100%;
+  background: var(--eink-black);
+}
+
+.trend-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.trend-col-today .trend-label {
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+/* Activity Map */
+.activity-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 104px;
+}
+
+.heatmap-days-legend {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 82px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.heatmap-grid {
+  display: flex;
+  gap: 3.5px;
+}
+
+.heatmap-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3.5px;
+}
+
+.heatmap-cell {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+}
+
+.heatmap-cell.level-0 {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+}
+
+.heatmap-cell.level-1 {
+  background: #bbbbbb;
+  border: 1px solid #777777;
+}
+
+.heatmap-cell.level-2 {
+  background: #555555;
+  border: 1px solid #222222;
+}
+
+.heatmap-cell.level-3 {
+  background: #000000;
+  border: 1px solid #000000;
+}
+
+.heatmap-levels-legend {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.legend-text {
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+/* Provider Distribution Multi-Bar */
+.provider-split-wrap {
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.provider-split-bar {
+  height: 12px;
+  border: 2px solid var(--eink-black);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  background: var(--eink-gray-light);
+}
+
+.provider-seg-claude {
+  background: var(--eink-black);
+  height: 100%;
+}
+
+.provider-seg-opencode {
+  background: #666666;
+  height: 100%;
+}
+
+.provider-seg-other {
+  background: #cccccc;
+  height: 100%;
+}
+
+.provider-legend-row {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.provider-legend-item {
+  display: flex;
+  align-items: center;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #000;
+  border-radius: 2px;
+  margin-right: 5px;
+}
+
+.swatch-claude {
+  background: #000000;
+}
+
+.swatch-opencode {
+  background: #666666;
+}
+
+.swatch-other {
+  background: #cccccc;
+}
+
 /* Active MCP Tool Bridges Strip */
 .mcp-bridges-row {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-shrink: 0;
   overflow: hidden;
 }
 
 .mcp-bridges-label {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: var(--eink-gray-dark);
@@ -695,104 +937,104 @@ body {
 
 .mcp-bridge-pill {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
-  padding: 2px 7px;
+  padding: 1.5px 7px;
   border: 1.5px solid var(--eink-black);
   border-radius: 4px;
   background: var(--eink-gray-light);
   white-space: nowrap;
 }
 
-/* Enlarged AI Agent Fleet List */
-.agent-list-lg {
+/* Compact Fleet Runtime Card */
+.fleet-compact-card {
+  border: 2px solid var(--eink-black);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--eink-white);
+  flex-grow: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex-grow: 1;
   overflow: hidden;
 }
 
-.agent-row-lg {
+.fleet-compact-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.fleet-compact-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+}
+
+.fleet-compact-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.fleet-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.fleet-compact-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border: 2px solid #000;
-  border-radius: 8px;
-  gap: 14px;
+  padding: 6px 12px;
+  border: 1.5px solid var(--eink-black);
+  border-radius: 5px;
+  background: var(--eink-white);
+  gap: 10px;
 }
 
-.agent-left-lg {
+.fleet-compact-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
   flex-grow: 1;
 }
 
-.agent-status-pill {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 900;
-  padding: 3px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
-  letter-spacing: 0.5px;
-}
-
-.pill-busy {
-  background: var(--eink-black);
-  color: var(--eink-white);
-  border: 1.5px solid var(--eink-black);
-}
-
-.pill-idle {
-  background: var(--eink-white);
-  color: var(--eink-black);
-  border: 1.5px solid var(--eink-black);
-}
-
-.agent-name-lg {
-  font-size: 22px;
+.fleet-compact-name {
+  font-size: 17px;
   font-weight: 900;
   white-space: nowrap;
 }
 
-.agent-detail-pill-lg {
+.fleet-compact-tag {
   font-family: var(--font-mono);
-  font-size: 15px;
+  font-size: 12px;
   font-weight: 800;
-  padding: 3px 10px;
-  border: 1.5px solid #000;
-  border-radius: 5px;
+  padding: 1px 6px;
+  border: 1px solid var(--eink-black);
+  border-radius: 4px;
+  background: var(--eink-gray-light);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.agent-right-lg {
-  display: flex;
-  align-items: center;
-  gap: 16px;
+.fleet-compact-right {
   flex-shrink: 0;
 }
 
-.agent-meta-lg {
+.fleet-compact-meta {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: 13px;
   font-weight: 900;
   text-align: right;
-  min-width: 195px;
-}
-
-.agent-bar-wrap {
-  width: 110px;
-  height: 12px;
-  border: 2px solid #000;
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--eink-white);
+  white-space: nowrap;
 }
 
 /* ========================================================================== */

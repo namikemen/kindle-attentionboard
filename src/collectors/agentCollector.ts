@@ -29,11 +29,52 @@ export interface ActiveTaskFocus {
   agentRole: string;
 }
 
+export interface TrendDay {
+  date: string;
+  dayLabel: string;
+  shortDay: string;
+  tokens: number;
+  cost: number;
+  tokensFormatted: string;
+  heightPercent: number;
+  isToday: boolean;
+}
+
+export interface ActivityCell {
+  date: string;
+  tokens: number;
+  level: 0 | 1 | 2 | 3;
+}
+
+export interface ActivityHeatmap {
+  weeks: ActivityCell[][];
+  totalActiveDays: number;
+  totalTokens: number;
+}
+
+export interface ProviderBreakdown {
+  claudePercent: number;
+  openCodePercent: number;
+  otherPercent: number;
+  claudeTokens: number;
+  openCodeTokens: number;
+  otherTokens: number;
+}
+
 export interface AgentTelemetry {
   totalRunningAgents: number;
   agents: DetectedAgent[];
   activeTask?: ActiveTaskFocus;
   mcpBridges: string[];
+  cacheEfficiency: {
+    hitRatePercent: number;
+    savingsUsd: number;
+    cachedTokens: number;
+    promptTokens: number;
+  };
+  providerBreakdown: ProviderBreakdown;
+  trend7Days: TrendDay[];
+  activityMap: ActivityHeatmap;
   claudeTokenStats: {
     todayTokens: number;
     todayMessages: number;
@@ -139,8 +180,9 @@ const MCP_BRIDGE_SIGNATURES: Array<{ pattern: RegExp; name: string }> = [
   { pattern: /gh_grep|github-grep/i, name: 'GitHub Grep' },
 ];
 
-function getTodayString(): string {
+function getTodayString(offsetDays: number = 0): string {
   const d = new Date();
+  if (offsetDays !== 0) d.setDate(d.getDate() + offsetDays);
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
@@ -153,19 +195,33 @@ function getStartOfTodayMs(): number {
   return d.getTime();
 }
 
+function formatTokensCompact(n: number): string {
+  if (n <= 0) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${Math.round(n / 1_000)}k`;
+  return String(n);
+}
+
 function parseClaudeStatsCache(today: string): {
   todayTokens: number;
   todayMessages: number;
   todayToolCalls: number;
   primaryModel: string;
   estimatedCostUsd: number;
+  cacheTokens: number;
+  promptTokens: number;
+  historyMap: Map<string, { tokens: number; cost: number }>;
 } {
+  const historyMap = new Map<string, { tokens: number; cost: number }>();
   const defaultStats = {
     todayTokens: 0,
     todayMessages: 0,
     todayToolCalls: 0,
     primaryModel: 'claude-sonnet',
     estimatedCostUsd: 0,
+    cacheTokens: 0,
+    promptTokens: 0,
+    historyMap,
   };
 
   const cachePath = path.join(os.homedir(), '.claude/stats-cache.json');
@@ -189,11 +245,21 @@ function parseClaudeStatsCache(today: string): {
     }
 
     if (Array.isArray(raw.dailyModelTokens)) {
-      const todayModelTokens = raw.dailyModelTokens.find((item: { date: string }) => item.date === today);
-      if (todayModelTokens && typeof todayModelTokens === 'object') {
-        for (const [key, val] of Object.entries(todayModelTokens)) {
+      for (const item of raw.dailyModelTokens) {
+        if (!item || typeof item !== 'object') continue;
+        let dayTokens = 0;
+        for (const [key, val] of Object.entries(item)) {
           if (key !== 'date' && typeof val === 'number') {
-            todayTokens += val;
+            dayTokens += val;
+          }
+        }
+        if (item.date && typeof item.date === 'string' && dayTokens > 0) {
+          historyMap.set(item.date, {
+            tokens: dayTokens,
+            cost: (dayTokens / 1_000_000) * 3.0,
+          });
+          if (item.date === today) {
+            todayTokens = dayTokens;
           }
         }
       }
@@ -207,10 +273,13 @@ function parseClaudeStatsCache(today: string): {
       }
     }
 
+    const cacheTokens = Math.round(todayTokens * 0.7);
+    const promptTokens = Math.round(todayTokens * 0.85);
+
     const costResult = calculateTokenCost({
-      inputTokens: Math.round(todayTokens * 0.4),
-      outputTokens: Math.round(todayTokens * 0.2),
-      cacheReadTokens: Math.round(todayTokens * 0.4),
+      inputTokens: Math.max(0, promptTokens - cacheTokens),
+      outputTokens: Math.round(todayTokens * 0.15),
+      cacheReadTokens: cacheTokens,
       cacheWriteTokens: 0,
       modelName: primaryModel,
     });
@@ -221,6 +290,9 @@ function parseClaudeStatsCache(today: string): {
       todayToolCalls,
       primaryModel,
       estimatedCostUsd: costResult.estimatedCostUsd,
+      cacheTokens,
+      promptTokens,
+      historyMap,
     };
   } catch {
     return defaultStats;
@@ -232,16 +304,23 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
   todayMessages: number;
   todayToolCalls: number;
   estimatedCostUsd: number;
+  cacheTokens: number;
+  promptTokens: number;
   activeTask?: ActiveTaskFocus;
   primaryModel?: string;
+  historyMap: Map<string, { tokens: number; cost: number }>;
 }> {
+  const historyMap = new Map<string, { tokens: number; cost: number }>();
   const result = {
     todayTokens: 0,
     todayMessages: 0,
     todayToolCalls: 0,
     estimatedCostUsd: 0,
+    cacheTokens: 0,
+    promptTokens: 0,
     activeTask: undefined as ActiveTaskFocus | undefined,
     primaryModel: undefined as string | undefined,
+    historyMap,
   };
 
   const dbPath = path.join(os.homedir(), '.local/share/opencode/opencode.db');
@@ -254,7 +333,9 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
       SELECT 
         count(*),
         COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
-        COALESCE(sum(json_extract(data, '$.cost')), 0)
+        COALESCE(sum(json_extract(data, '$.cost')), 0),
+        COALESCE(sum(json_extract(data, '$.tokens.cache.read')), 0),
+        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.cache.read')), 0)
       FROM message
       WHERE time_created >= ${startOfTodayMs};
       SELECT count(*)
@@ -270,10 +351,18 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
       FROM session s
       ORDER BY s.time_updated DESC
       LIMIT 1;
+      SELECT 
+        date(time_created / 1000, 'unixepoch', 'localtime') AS day,
+        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
+        COALESCE(sum(json_extract(data, '$.cost')), 0)
+      FROM message
+      GROUP BY 1
+      ORDER BY 1 DESC
+      LIMIT 90;
     `;
 
     const { stdout } = await execAsync(`sqlite3 "file:${dbPath}?mode=ro" "${query.replace(/\n\s+/g, ' ')}"`, {
-      timeout: 2000,
+      timeout: 2500,
     });
 
     const lines = stdout.trim().split('\n').map((l) => l.trim());
@@ -282,6 +371,8 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
       result.todayMessages = parseInt(statsParts[0], 10) || 0;
       result.todayTokens = Math.round(parseFloat(statsParts[1]) || 0);
       result.estimatedCostUsd = parseFloat((parseFloat(statsParts[2]) || 0).toFixed(2));
+      result.cacheTokens = Math.round(parseFloat(statsParts[3]) || 0);
+      result.promptTokens = Math.round(parseFloat(statsParts[4]) || 0);
 
       result.todayToolCalls = parseInt(lines[1], 10) || 0;
     }
@@ -343,11 +434,142 @@ async function parseOpenCodeData(startOfTodayMs: number): Promise<{
         result.primaryModel = modelName;
       }
     }
+
+    // Line 5+: historical days
+    for (let i = 4; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line) continue;
+      const parts = line.split('|');
+      if (parts.length >= 3) {
+        const day = parts[0];
+        const tokens = Math.round(parseFloat(parts[1]) || 0);
+        const cost = parseFloat(parts[2]) || 0;
+        if (day && tokens > 0) {
+          historyMap.set(day, { tokens, cost });
+        }
+      }
+    }
   } catch {
     // OpenCode SQLite reading fallback
   }
 
   return result;
+}
+
+function buildTrend7Days(
+  todayStr: string,
+  historyMap: Map<string, { tokens: number; cost: number }>,
+  todayTokens: number,
+  todayCost: number
+): TrendDay[] {
+  const days: TrendDay[] = [];
+  const now = new Date();
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    const shortDay = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const isToday = i === 0;
+
+    let tokens = 0;
+    let cost = 0;
+
+    if (isToday) {
+      tokens = todayTokens;
+      cost = todayCost;
+    } else {
+      const entry = historyMap.get(dateStr);
+      if (entry) {
+        tokens = entry.tokens;
+        cost = entry.cost;
+      }
+    }
+
+    days.push({
+      date: dateStr,
+      dayLabel: isToday ? 'TODAY' : `${shortDay} ${day}`,
+      shortDay,
+      tokens,
+      cost,
+      tokensFormatted: formatTokensCompact(tokens),
+      heightPercent: 0,
+      isToday,
+    });
+  }
+
+  const peak = Math.max(...days.map((d) => d.tokens), 10_000);
+  for (const d of days) {
+    d.heightPercent = d.tokens > 0 ? Math.min(100, Math.max(8, Math.round((d.tokens / peak) * 100))) : 4;
+  }
+
+  return days;
+}
+
+function buildActivityHeatmap(
+  historyMap: Map<string, { tokens: number; cost: number }>,
+  todayStr: string,
+  todayTokens: number
+): ActivityHeatmap {
+  const weeks: ActivityCell[][] = [];
+  const now = new Date();
+
+  // Find the end of current week (Sunday)
+  const currentDayOfWeek = now.getDay(); // 0 is Sun, 1 is Mon...
+  const daysUntilSunday = currentDayOfWeek === 0 ? 0 : 7 - currentDayOfWeek;
+  const endSunday = new Date(now);
+  endSunday.setDate(endSunday.getDate() + daysUntilSunday);
+
+  const totalDays = 70; // 10 weeks
+  const startDate = new Date(endSunday);
+  startDate.setDate(startDate.getDate() - totalDays + 1);
+
+  let activeDays = 0;
+  let totalTokens = 0;
+
+  for (let w = 0; w < 10; w++) {
+    const weekCells: ActivityCell[] = [];
+    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      const cellDate = new Date(startDate);
+      cellDate.setDate(cellDate.getDate() + w * 7 + dayIdx);
+
+      const year = cellDate.getFullYear();
+      const month = String(cellDate.getMonth() + 1).padStart(2, '0');
+      const day = String(cellDate.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+
+      let tokens = 0;
+      if (dateStr === todayStr) {
+        tokens = todayTokens;
+      } else {
+        tokens = historyMap.get(dateStr)?.tokens || 0;
+      }
+
+      let level: 0 | 1 | 2 | 3 = 0;
+      if (tokens > 250_000) level = 3;
+      else if (tokens > 50_000) level = 2;
+      else if (tokens > 0) level = 1;
+
+      if (tokens > 0) activeDays += 1;
+      totalTokens += tokens;
+
+      weekCells.push({
+        date: dateStr,
+        tokens,
+        level,
+      });
+    }
+    weeks.push(weekCells);
+  }
+
+  return {
+    weeks,
+    totalActiveDays: activeDays,
+    totalTokens,
+  };
 }
 
 export async function getAgentTelemetry(): Promise<AgentTelemetry> {
@@ -379,7 +601,6 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
         continue;
       }
 
-      // Check for specific named MCP tool server bridges
       for (const mcpSig of MCP_BRIDGE_SIGNATURES) {
         if (mcpSig.pattern.test(cmd)) {
           activeMcpBridges.add(mcpSig.name);
@@ -429,13 +650,11 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
     // Process list failure fallback
   }
 
-  // Update MCP agent entry with detected named bridges if any
   const mcpAgent = detectedAgents.find((a) => a.category === 'mcp');
   if (mcpAgent && activeMcpBridges.size > 0) {
     mcpAgent.detail = `${activeMcpBridges.size} Active (${Array.from(activeMcpBridges).slice(0, 2).join(', ')})`;
   }
 
-  // Sort agents: active/busy or primary coding agents first
   detectedAgents.sort((a, b) => {
     if (a.status === 'busy' && b.status !== 'busy') return -1;
     if (b.status === 'busy' && a.status !== 'busy') return 1;
@@ -450,10 +669,8 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
   const claudeStats = parseClaudeStatsCache(todayStr);
   const openCodeData = await parseOpenCodeData(startOfTodayMs);
 
-  // Determine active task focus
   let activeTask = openCodeData.activeTask;
 
-  // If Claude Code CLI is busy, emphasize it as the primary active task
   const claudeCli = detectedAgents.find((a) => a.name === 'Claude Code CLI');
   if (claudeCli) {
     if (claudeCli.detail && claudeCli.detail !== 'Agent Session') {
@@ -481,11 +698,59 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
   const totalToolCalls = claudeStats.todayToolCalls + openCodeData.todayToolCalls;
   const totalCost = parseFloat((claudeStats.estimatedCostUsd + openCodeData.estimatedCostUsd).toFixed(2));
 
+  // Merge historical dates
+  const combinedHistory = new Map<string, { tokens: number; cost: number }>();
+  for (const [date, val] of claudeStats.historyMap.entries()) {
+    combinedHistory.set(date, { ...val });
+  }
+  for (const [date, val] of openCodeData.historyMap.entries()) {
+    const existing = combinedHistory.get(date);
+    if (existing) {
+      existing.tokens += val.tokens;
+      existing.cost += val.cost;
+    } else {
+      combinedHistory.set(date, { ...val });
+    }
+  }
+
+  // Build Trend & Activity Heatmap
+  const trend7Days = buildTrend7Days(todayStr, combinedHistory, totalTokens, totalCost);
+  const activityMap = buildActivityHeatmap(combinedHistory, todayStr, totalTokens);
+
+  // Vorssaint Cache Efficiency & Savings
+  const totalCachedTokens = claudeStats.cacheTokens + openCodeData.cacheTokens;
+  const totalPromptTokens = claudeStats.promptTokens + openCodeData.promptTokens;
+  const hitRatePercent = totalPromptTokens > 0 ? Math.round((totalCachedTokens / totalPromptTokens) * 100) : 0;
+  const savingsUsd = parseFloat(((totalCachedTokens / 1_000_000) * 2.7).toFixed(2));
+
+  // Provider distribution
+  const claudeTokens = claudeStats.todayTokens;
+  const openCodeTokens = openCodeData.todayTokens;
+  const otherTokens = 0;
+  const sumTokens = totalTokens || 1;
+  const providerBreakdown: ProviderBreakdown = {
+    claudeTokens,
+    openCodeTokens,
+    otherTokens,
+    claudePercent: Math.round((claudeTokens / sumTokens) * 100),
+    openCodePercent: Math.round((openCodeTokens / sumTokens) * 100),
+    otherPercent: Math.round((otherTokens / sumTokens) * 100),
+  };
+
   return {
     totalRunningAgents: detectedAgents.length,
     agents: detectedAgents,
     activeTask,
     mcpBridges: Array.from(activeMcpBridges),
+    cacheEfficiency: {
+      hitRatePercent,
+      savingsUsd,
+      cachedTokens: totalCachedTokens,
+      promptTokens: totalPromptTokens,
+    },
+    providerBreakdown,
+    trend7Days,
+    activityMap,
     claudeTokenStats: {
       todayTokens: totalTokens,
       todayMessages: totalMessages,
