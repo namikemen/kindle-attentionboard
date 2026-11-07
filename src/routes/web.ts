@@ -22,7 +22,8 @@ webRouter.get('/', async (req: Request, res: Response) => {
       tab = normalizeTabId(req.query.tab);
       setActiveTab(tab);
     }
-    const data = await gatherDashboardData();
+    const isDemo = req.query.demo === '1';
+    const data = await gatherDashboardData(isDemo);
     const html = renderDashboardHtml(data, true, tab);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);
@@ -35,7 +36,8 @@ webRouter.get('/', async (req: Request, res: Response) => {
 webRouter.get('/render', async (req: Request, res: Response) => {
   try {
     const tab = req.query.tab !== undefined ? normalizeTabId(req.query.tab) : getTabState().activeTab;
-    const data = await gatherDashboardData();
+    const isDemo = req.query.demo === '1';
+    const data = await gatherDashboardData(isDemo);
     const html = renderDashboardHtml(data, false, tab);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.send(html);

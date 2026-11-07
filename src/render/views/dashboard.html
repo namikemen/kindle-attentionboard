@@ -23,40 +23,43 @@
       <div class="weather-pill">
         <div class="weather-temp">{{TEMP}}</div>
         <div class="weather-details">
-          <span class="weather-cond-line">{{WEATHER_CITY}} • {{WEATHER_COND}}</span>
-          <span>Feels {{FEELS_LIKE}}° • H:{{TEMP_MAX}} L:{{TEMP_MIN}}</span>
-          <span>💧 {{HUMIDITY}}% • 💨 {{WIND_SPEED}}km/h • 🌧 {{PRECIP}}%</span>
+          <span class="weather-cond-line">{{WEATHER_CITY}} &bull; {{WEATHER_COND}}</span>
+          <span>FEELS {{FEELS_LIKE}}&deg; &bull; H:{{TEMP_MAX}} L:{{TEMP_MIN}}</span>
+          <span>HUM {{HUMIDITY}}% &bull; WIND {{WIND_SPEED}}km/h &bull; RAIN {{PRECIP}}%</span>
         </div>
       </div>
     </div>
   </header>
 
-  <!-- 3-Tab Switcher Bar -->
+  <!-- 3-Tab Switcher Bar (Braun Precision Style) -->
   <nav class="tab-bar" aria-label="Dashboard Tabs">
     <a href="/?tab=1" class="tab-btn {{TAB_1_ACTIVE_CLASS}}" onclick="switchTab(event, 1)">
-      <span class="tab-num">1</span>
-      <span class="tab-label">📅 SCHEDULE &amp; TASKS</span>
+      <span class="tab-num">01</span>
+      <span class="tab-label">SCHEDULE &amp; TASKS</span>
     </a>
     <a href="/?tab=2" class="tab-btn {{TAB_2_ACTIVE_CLASS}}" onclick="switchTab(event, 2)">
-      <span class="tab-num">2</span>
-      <span class="tab-label">🎵 NOW PLAYING &amp; AI</span>
+      <span class="tab-num">02</span>
+      <span class="tab-label">AI AGENT COMMAND</span>
     </a>
     <a href="/?tab=3" class="tab-btn {{TAB_3_ACTIVE_CLASS}}" onclick="switchTab(event, 3)">
-      <span class="tab-num">3</span>
-      <span class="tab-label">⚡ SYSTEM &amp; DEVICES</span>
+      <span class="tab-num">03</span>
+      <span class="tab-label">MEDIA &amp; SYSTEM</span>
     </a>
   </nav>
 
   <!-- ===================================================================== -->
-  <!-- TAB 1: REMINDER & CALENDAR (TODAY + THIS WEEK SCHEDULE & TASKS)       -->
+  <!-- TAB 1: SCHEDULE & TASKS                                               -->
   <!-- ===================================================================== -->
   <main class="tab-panel {{TAB_1_PANEL_CLASS}}" id="tab-panel-1">
+    <!-- Top Day Progress & Focus Timeline Bar -->
+    {{DAY_PROGRESS_HTML}}
+
     <!-- Row 1: Today's Schedule & This Week's Schedule -->
     <div class="grid-row tab1-schedule-row">
       <section class="card" aria-labelledby="heading-today-schedule">
         <div class="card-header">
-          <h2 id="heading-today-schedule" class="card-title">📅 Today's Schedule</h2>
-          <span class="card-badge">{{TODAY_EVENT_COUNT}} Today</span>
+          <h2 id="heading-today-schedule" class="card-title">Today's Schedule</h2>
+          <span class="card-badge">{{TODAY_EVENT_COUNT}} TODAY</span>
         </div>
         <div class="item-list">
           {{TODAY_EVENTS_HTML}}
@@ -65,8 +68,8 @@
 
       <section class="card" aria-labelledby="heading-week-schedule">
         <div class="card-header">
-          <h2 id="heading-week-schedule" class="card-title">🗓 This Week's Schedule</h2>
-          <span class="card-badge">{{WEEK_EVENT_COUNT}} Next 7d</span>
+          <h2 id="heading-week-schedule" class="card-title">This Week's Schedule</h2>
+          <span class="card-badge">{{WEEK_EVENT_COUNT}} NEXT 7D</span>
         </div>
         <div class="item-list">
           {{WEEK_EVENTS_HTML}}
@@ -78,8 +81,8 @@
     <div class="grid-row tab1-tasks-row">
       <section class="card" aria-labelledby="heading-today-tasks">
         <div class="card-header">
-          <h2 id="heading-today-tasks" class="card-title">📌 Today's Tasks</h2>
-          <span class="card-badge">{{TODAY_TASK_COUNT}} Active</span>
+          <h2 id="heading-today-tasks" class="card-title">Today's Tasks</h2>
+          <span class="card-badge">{{TODAY_TASK_COUNT}} ACTIVE</span>
         </div>
         <div class="item-list">
           {{TODAY_TASKS_HTML}}
@@ -88,8 +91,8 @@
 
       <section class="card" aria-labelledby="heading-week-tasks">
         <div class="card-header">
-          <h2 id="heading-week-tasks" class="card-title">📋 This Week &amp; Backlog</h2>
-          <span class="card-badge">{{WEEK_TASK_COUNT}} Open</span>
+          <h2 id="heading-week-tasks" class="card-title">This Week &amp; Backlog</h2>
+          <span class="card-badge">{{WEEK_TASK_COUNT}} OPEN</span>
         </div>
         <div class="item-list">
           {{WEEK_TASKS_HTML}}
@@ -99,21 +102,88 @@
   </main>
 
   <!-- ===================================================================== -->
-  <!-- TAB 2: NOW PLAYING & ACTIVE AI AGENTS (CLEANLY SEPARATED UI)          -->
+  <!-- TAB 2: FULL-SCREEN DEDICATED AI AGENT COMMAND CENTER                  -->
   <!-- ===================================================================== -->
   <main class="tab-panel {{TAB_2_PANEL_CLASS}}" id="tab-panel-2">
-    <!-- Top Card: Pure Media Now Playing -->
-    <section class="card tab2-media-card" aria-labelledby="heading-music">
+    <section class="card tab2-agents-card" aria-labelledby="heading-agents">
       <div class="card-header">
-        <h2 id="heading-music" class="card-title">🎵 Now Playing</h2>
-        <span class="card-badge">{{MUSIC_SOURCE}}</span>
+        <h2 id="heading-agents" class="card-title">AI AGENT COMMAND CENTER</h2>
+        <span class="card-badge">{{ACTIVE_SESSIONS_COUNT}} SESSIONS &bull; {{ACTIVE_AGENT_COUNT}} RUNNING &bull; {{PRIMARY_MODEL}}</span>
+      </div>
+
+      <!-- 5-Column Vorssaint AI Telemetry & Cache Efficiency Ledger -->
+      <div class="ai-telemetry-banner">
+        <div class="ai-stat-box">
+          <span class="ai-stat-lbl">DAILY SPEND</span>
+          <span class="ai-stat-val">${{TODAY_COST}}</span>
+          <span class="ai-stat-sub">Claude + OpenCode</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-lbl">CACHE EFFICIENCY</span>
+          <span class="ai-stat-val">{{CACHE_HIT_RATE}}%</span>
+          <span class="ai-stat-sub">{{CACHED_TOKENS}} / {{PROMPT_TOKENS}} Cached</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-lbl">DOLLARS SAVED</span>
+          <span class="ai-stat-val">${{CACHE_SAVINGS}}</span>
+          <span class="ai-stat-sub">Via Prompt Caching</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-lbl">TOTAL TOKENS</span>
+          <span class="ai-stat-val">{{TODAY_TOKENS}}</span>
+          <span class="ai-stat-sub">Cumulative Today</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-lbl">AGENT ACTIVITY</span>
+          <span class="ai-stat-val">{{TODAY_MESSAGES}}<span class="ai-stat-unit">MSGS</span></span>
+          <span class="ai-stat-sub">{{CLAUDE_CALLS}} Tool Calls Today</span>
+        </div>
+      </div>
+
+      <!-- Live Active Task / Session Focus Banner -->
+      {{ACTIVE_TASK_HTML}}
+
+      <!-- Row 1 (Full Width): Expanded 7-Day Token & Spend Trend Chart -->
+      {{TREND_CHART_HTML}}
+
+      <!-- Row 2 (Full Width): Expanded 10-Week Activity Heatmap -->
+      {{ACTIVITY_MAP_HTML}}
+
+      <!-- Framed Mid-Deck: Provider Distribution & Active MCP Tool Bridges -->
+      <div class="telemetry-mid-deck">
+        {{PROVIDER_SPLIT_HTML}}
+        {{MCP_BRIDGES_HTML}}
+      </div>
+
+      <!-- Compact 2x3 Fleet Runtime Matrix -->
+      <div class="fleet-compact-card">
+        <div class="fleet-compact-header">
+          <span class="fleet-compact-title">FLEET RUNTIME MATRIX</span>
+          <span class="fleet-compact-count">{{ACTIVE_AGENT_COUNT}} Monitored</span>
+        </div>
+        <div class="fleet-compact-list">
+          {{AGENTS_HTML}}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 3: MEDIA (NOW PLAYING), SYSTEM HEALTH & APPLE DEVICES             -->
+  <!-- ===================================================================== -->
+  <main class="tab-panel {{TAB_3_PANEL_CLASS}}" id="tab-panel-3">
+    <!-- Top Card: Pure Media Now Playing -->
+    <section class="card tab3-media-card" aria-labelledby="heading-music">
+      <div class="card-header">
+        <h2 id="heading-music" class="card-title">NOW PLAYING</h2>
+        <span class="card-badge">{{MUSIC_ELAPSED}} / {{MUSIC_DURATION}}</span>
       </div>
       <div class="media-showcase">
         <div class="media-top-row">
           <div class="media-meta-col">
             <div class="media-state-row">
               <span class="music-status-pill">{{MUSIC_STATUS}}</span>
-              <span class="media-source-tag">Source: {{MUSIC_SOURCE}}</span>
+              <span class="media-source-tag">SOURCE: {{MUSIC_SOURCE}}</span>
             </div>
             <div class="music-title-lg">{{MUSIC_TITLE}}</div>
             <div class="music-artist-lg">{{MUSIC_ARTIST}}</div>
@@ -128,80 +198,18 @@
           </div>
           <div class="media-time-row">
             <span class="media-time-elapsed">{{MUSIC_ELAPSED}}</span>
-            <span class="media-time-pct">{{MUSIC_PROGRESS}}% Completed</span>
+            <span class="media-time-pct">{{MUSIC_PROGRESS}}% COMPLETED</span>
             <span class="media-time-total">{{MUSIC_REMAINING}} ({{MUSIC_DURATION}})</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Bottom Card: Pure Active AI Agents & Telemetry -->
-    <section class="card tab2-agents-card" aria-labelledby="heading-agents">
-      <div class="card-header">
-        <h2 id="heading-agents" class="card-title">🤖 Active AI Agents &amp; Telemetry</h2>
-        <span class="card-badge">{{ACTIVE_AGENT_COUNT}} Running • {{PRIMARY_MODEL}}</span>
-      </div>
-
-      <!-- Vorssaint AI Telemetry & Cache Efficiency Banner -->
-      <div class="ai-telemetry-banner">
-        <div class="ai-stat-box">
-          <span class="ai-stat-val">${{TODAY_COST}}</span>
-          <span class="ai-stat-lbl">API Spend</span>
-        </div>
-        <div class="ai-stat-box">
-          <span class="ai-stat-val">{{CACHE_HIT_RATE}}%</span>
-          <span class="ai-stat-lbl">Cache Hit</span>
-        </div>
-        <div class="ai-stat-box">
-          <span class="ai-stat-val">${{CACHE_SAVINGS}}</span>
-          <span class="ai-stat-lbl">Saved ($)</span>
-        </div>
-        <div class="ai-stat-box">
-          <span class="ai-stat-val">{{TODAY_TOKENS}}</span>
-          <span class="ai-stat-lbl">Total Tokens</span>
-        </div>
-      </div>
-
-      <!-- Live Active Task / Session Focus Banner -->
-      {{ACTIVE_TASK_HTML}}
-
-      <!-- 7-Day Trend & 10-Week Activity Row -->
-      <div class="analytics-row">
-        <!-- 7-Day Trend Chart -->
-        {{TREND_CHART_HTML}}
-
-        <!-- 10-Week Activity Heatmap -->
-        {{ACTIVITY_MAP_HTML}}
-      </div>
-
-      <!-- Provider Distribution Multi-Bar -->
-      {{PROVIDER_SPLIT_HTML}}
-
-      <!-- Active MCP Tool Bridges Strip -->
-      {{MCP_BRIDGES_HTML}}
-
-      <!-- Compact Running AI Agents Fleet List -->
-      <div class="fleet-compact-card">
-        <div class="fleet-compact-header">
-          <span class="fleet-compact-title">⚡ FLEET RUNTIME</span>
-          <span class="fleet-compact-count">{{ACTIVE_AGENT_COUNT}} Processes</span>
-        </div>
-        <div class="fleet-compact-list">
-          {{AGENTS_HTML}}
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- ===================================================================== -->
-  <!-- TAB 3: SYSTEM HEALTH (+ TOP APPS) & APPLE DEVICES BATTERY             -->
-  <!-- ===================================================================== -->
-  <main class="tab-panel {{TAB_3_PANEL_CLASS}}" id="tab-panel-3">
-    <!-- Top Card: System Health + Top Resource-Consuming Apps -->
+    <!-- Middle Card: System Health & Top Resource-Consuming Apps -->
     <section class="card tab3-system-card" aria-labelledby="heading-system">
       <div class="card-header">
-        <h2 id="heading-system" class="card-title">⚡ System Health &amp; Top Resource Apps</h2>
-        <span class="card-badge">Load {{LOAD_1M}} / {{LOAD_5M}} • {{CPU_CORES}} Cores</span>
+        <h2 id="heading-system" class="card-title">SYSTEM HEALTH &amp; TOP APPS</h2>
+        <span class="card-badge">LOAD {{LOAD_1M}} / {{LOAD_5M}} &bull; {{CPU_CORES}} CORES</span>
       </div>
 
       <!-- 4-Column Hardware Gauges: CPU, GPU, RAM, DISK -->
@@ -211,7 +219,7 @@
             <span class="meter-title-lg">CPU</span>
             <span class="meter-val-lg">{{CPU_PCT}}%</span>
           </div>
-          <div class="meter-sub-lg">User {{CPU_USER}}% • Sys {{CPU_SYS}}%</div>
+          <div class="meter-sub-lg">User {{CPU_USER}}% &bull; Sys {{CPU_SYS}}%</div>
           <div class="progress-bar-container">
             <div class="progress-bar-fill" style="width: {{CPU_PCT}}%;"></div>
           </div>
@@ -222,7 +230,7 @@
             <span class="meter-title-lg">GPU</span>
             <span class="meter-val-lg">{{GPU_PCT}}%</span>
           </div>
-          <div class="meter-sub-lg">{{GPU_CORES}}C • {{GPU_MEM}}MB Act ({{GPU_ALLOC}}G)</div>
+          <div class="meter-sub-lg">{{GPU_CORES}}C &bull; {{GPU_MEM}}MB ({{GPU_ALLOC}}G)</div>
           <div class="progress-bar-container">
             <div class="progress-bar-fill" style="width: {{GPU_PCT}}%;"></div>
           </div>
@@ -254,13 +262,13 @@
       <!-- 2-Column Top Apps Breakdown: Top CPU & Top Memory -->
       <div class="top-apps-grid">
         <div class="top-apps-col">
-          <div class="top-apps-header">🔥 Top CPU-Consuming Apps</div>
+          <div class="top-apps-header">TOP CPU-CONSUMING APPS</div>
           <div class="top-apps-list">
             {{TOP_CPU_APPS_HTML}}
           </div>
         </div>
         <div class="top-apps-col">
-          <div class="top-apps-header">🧠 Top Memory-Consuming Apps</div>
+          <div class="top-apps-header">TOP MEMORY-CONSUMING APPS</div>
           <div class="top-apps-list">
             {{TOP_MEM_APPS_HTML}}
           </div>
@@ -271,8 +279,8 @@
     <!-- Bottom Card: Apple Ecosystem Devices Battery -->
     <section class="card tab3-battery-card" aria-labelledby="heading-battery">
       <div class="card-header">
-        <h2 id="heading-battery" class="card-title">🔋 Apple Ecosystem Devices</h2>
-        <span class="card-badge">{{DEVICE_COUNT}} Linked</span>
+        <h2 id="heading-battery" class="card-title">APPLE ECOSYSTEM DEVICES</h2>
+        <span class="card-badge">{{DEVICE_COUNT}} LINKED</span>
       </div>
       <div class="battery-grid-lg">
         {{DEVICES_BATTERY_HTML}}

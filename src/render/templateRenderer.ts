@@ -33,10 +33,10 @@ export interface DashboardPayload {
   };
 }
 
-export async function gatherDashboardData(): Promise<DashboardPayload> {
+export async function gatherDashboardData(forceDemo: boolean = false): Promise<DashboardPayload> {
   // Screenshot / UI work mode: return fictional data instead of touching the
   // host's calendar, location, media and devices.
-  if (process.env.DEMO_MODE === '1') {
+  if (forceDemo || process.env.DEMO_MODE === '1') {
     return buildDemoDashboard();
   }
 
@@ -97,40 +97,69 @@ function formatMemoryMb(mb: number): string {
 function getDeviceIcon(type: AppleDeviceBattery['type']): string {
   switch (type) {
     case 'macbook':
-      return '💻';
+      return '<span class="dev-type-badge">MAC</span>';
     case 'iphone':
-      return '📱';
+      return '<span class="dev-type-badge">IPHONE</span>';
     case 'ipad':
-      return '📲';
+      return '<span class="dev-type-badge">IPAD</span>';
     case 'watch':
-      return '⌚';
+      return '<span class="dev-type-badge">WATCH</span>';
     case 'keyboard':
-      return '⌨️';
+      return '<span class="dev-type-badge">KBD</span>';
     case 'mouse':
     case 'trackpad':
-      return '🖱';
+      return '<span class="dev-type-badge">MOUSE</span>';
     case 'headphones':
-      return '🎧';
+      return '<span class="dev-type-badge">AUDIO</span>';
     default:
-      return '🔋';
+      return '<span class="dev-type-badge">DEV</span>';
   }
 }
 
-function renderEventItem(ev: CalendarEvent, showDayPill: boolean): string {
+function renderDayProgressHtml(data: DashboardPayload): string {
+  const [hourStr, minStr] = (data.clock.time || '11:25').split(':');
+  const hour = parseInt(hourStr, 10) || 11;
+  const min = parseInt(minStr, 10) || 25;
+  const totalDayMins = (hour - 6) * 60 + min; // 06:00 to 22:00 (16h = 960m window)
+  const dayPct = Math.max(4, Math.min(100, Math.round((totalDayMins / 960) * 100)));
+
+  const timerStatus = data.timer.isRunning
+    ? `FOCUS ACTIVE • ${escapeHtml(data.timer.timeFormatted)}`
+    : `POMODORO READY • ${data.timer.completedPomodoros} DONE`;
+
+  return `
+    <div class="tab1-status-strip">
+      <div class="status-strip-left">
+        <span class="status-strip-tag">DAY TIMELINE (06:00–22:00)</span>
+        <div class="day-timeline-track">
+          <div class="day-timeline-fill" style="width: ${dayPct}%;"></div>
+        </div>
+        <span class="status-strip-pct">${dayPct}% ELAPSED</span>
+      </div>
+      <div class="status-strip-right">
+        <span class="focus-pill">${timerStatus}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderEventItem(ev: CalendarEvent, showDayPill: boolean, isFirstToday: boolean = false): string {
   const dayPill = showDayPill ? `<span class="event-day-pill">${escapeHtml(ev.dayLabel)}</span>` : '';
+  const isFeatured = !showDayPill && (ev.status === 'NOW' || ev.status === 'NEXT' || isFirstToday);
   let statusBadge = '';
   if (!showDayPill && (ev.status === 'NOW' || ev.status === 'NEXT')) {
-    const cls = ev.status === 'NOW' ? 'event-status-pill event-status-now' : 'event-status-pill';
+    const cls = ev.status === 'NOW' ? 'event-status-pill event-status-now' : 'event-status-pill event-status-next';
     statusBadge = `<span class="${cls}">${ev.status}</span>`;
   }
 
   const subParts: string[] = [];
-  if (ev.location) subParts.push(`📍 ${escapeHtml(ev.location)}`);
+  if (ev.location) subParts.push(`LOC: ${escapeHtml(ev.location)}`);
   if (ev.notes) subParts.push(escapeHtml(ev.notes));
   const subRow = subParts.length > 0 ? `<div class="event-sub-row">${subParts.join(' • ')}</div>` : '';
+  const featuredClass = isFeatured ? ' event-item-featured' : '';
 
   return `
-    <div class="event-item">
+    <div class="event-item${featuredClass}">
       <div class="event-top-row">
         ${dayPill}
         <span class="event-time">${escapeHtml(ev.timeRange)}</span>
@@ -163,6 +192,10 @@ function renderTaskItem(t: TaskItem): string {
 
 function renderTopAppRow(app: TopAppUsage, rank: number, primaryMetric: 'cpu' | 'mem'): string {
   const procStr = app.processCount > 1 ? `(${app.processCount}p)` : '';
+  const barPct =
+    primaryMetric === 'cpu'
+      ? Math.min(100, Math.max(6, Math.round(app.cpuPercent * 2.5)))
+      : Math.min(100, Math.max(6, Math.round((app.memoryMb / 1400) * 100)));
   const rightHtml =
     primaryMetric === 'cpu'
       ? `${app.cpuPercent.toFixed(1)}% CPU <span class="top-app-sub">• ${formatMemoryMb(app.memoryMb)}</span>`
@@ -174,6 +207,9 @@ function renderTopAppRow(app: TopAppUsage, rank: number, primaryMetric: 'cpu' | 
         <span class="top-app-rank">${rank}</span>
         <span class="top-app-name">${escapeHtml(app.name)}</span>
         <span class="top-app-procs">${procStr}</span>
+      </div>
+      <div class="top-app-bar-track">
+        <div class="top-app-bar-fill" style="width: ${barPct}%;"></div>
       </div>
       <div class="top-app-right">${rightHtml}</div>
     </div>
@@ -187,13 +223,14 @@ function renderActiveTaskHtml(task?: ActiveTaskFocus): string {
         <div class="agent-focus-top">
           <div class="agent-focus-top-left">
             <span class="agent-status-badge badge-idle">● STANDBY</span>
-            <span class="agent-focus-project">Workspace</span>
+            <span class="agent-focus-project">WORKSPACE READY</span>
           </div>
-          <span class="agent-focus-model">Fleet Ready</span>
+          <span class="agent-focus-model">FLEET STANDBY</span>
         </div>
         <div class="agent-focus-body">
-          <div class="agent-focus-title">No active background tasks</div>
-          <div class="agent-focus-sub">Agents idle • Ready for prompt or code edit</div>
+          <span class="agent-focus-title">No active background tasks</span>
+          <span class="agent-focus-sep">—</span>
+          <span class="agent-focus-sub">Agents idle • Ready for prompt or code edit</span>
         </div>
       </div>
     `;
@@ -209,13 +246,14 @@ function renderActiveTaskHtml(task?: ActiveTaskFocus): string {
       <div class="agent-focus-top">
         <div class="agent-focus-top-left">
           <span class="agent-status-badge ${badgeClass}">${badgeText}</span>
-          <span class="agent-focus-project">📂 ${escapeHtml(task.projectName)}</span>
+          <span class="agent-focus-project">DIR: ${escapeHtml(task.projectName)}</span>
         </div>
         <span class="agent-focus-model">${escapeHtml(task.modelName)}${escapeHtml(roleStr)}</span>
       </div>
       <div class="agent-focus-body">
-        <div class="agent-focus-title">${escapeHtml(task.sessionTitle)}</div>
-        <div class="agent-focus-sub">${escapeHtml(task.taskTitle)}</div>
+        <span class="agent-focus-title">${escapeHtml(task.sessionTitle)}</span>
+        <span class="agent-focus-sep">—</span>
+        <span class="agent-focus-sub">${escapeHtml(task.taskTitle)}</span>
       </div>
     </div>
   `;
@@ -225,10 +263,15 @@ function renderMcpBridgesHtml(bridges: string[]): string {
   if (!bridges || bridges.length === 0) {
     return '';
   }
-  const tags = bridges.map((b) => `<span class="mcp-bridge-pill">${escapeHtml(b)}</span>`).join('');
+  const tags = bridges
+    .map(
+      (b, idx) =>
+        `<span class="mcp-bridge-pill"><span class="mcp-bridge-idx">${String(idx + 1).padStart(2, '0')}</span>${escapeHtml(b)}</span>`
+    )
+    .join('');
   return `
     <div class="mcp-bridges-row">
-      <span class="mcp-bridges-label">TOOLS &amp; BRIDGES</span>
+      <span class="mcp-bridges-label">MCP BUS (${bridges.length})</span>
       <div class="mcp-bridges-list">
         ${tags}
       </div>
@@ -239,13 +282,21 @@ function renderMcpBridgesHtml(bridges: string[]): string {
 function renderTrendChartHtml(days: TrendDay[]): string {
   if (!days || days.length === 0) return '';
 
+  const total7dTokens = days.reduce((sum, d) => sum + d.tokens, 0);
+  const total7dCost = days.reduce((sum, d) => sum + d.cost, 0);
+  const peakDay = days.reduce((best, d) => (d.tokens > best.tokens ? d : best), days[0]);
+
   const columns = days
     .map((d) => {
       const todayClass = d.isToday ? ' trend-col-today' : '';
       const barFillClass = d.isToday ? 'trend-bar-fill-today' : 'trend-bar-fill';
+      const costStr = `$${d.cost.toFixed(2)}`;
       return `
         <div class="trend-col${todayClass}">
-          <span class="trend-val">${escapeHtml(d.tokensFormatted)}</span>
+          <div class="trend-top-meta">
+            <span class="trend-val">${escapeHtml(d.tokensFormatted)}</span>
+            <span class="trend-cost">${costStr}</span>
+          </div>
           <div class="trend-bar-track">
             <div class="${barFillClass}" style="height: ${d.heightPercent}%;"></div>
           </div>
@@ -258,11 +309,20 @@ function renderTrendChartHtml(days: TrendDay[]): string {
   return `
     <div class="trend-section">
       <div class="trend-header">
-        <span class="trend-title">📊 7-DAY TOKEN &amp; SPEND TREND</span>
-        <span class="trend-sub">Daily API Volume</span>
+        <span class="trend-title">01 // 7-DAY TOKEN &amp; SPEND TREND</span>
+        <span class="trend-sub">7D TOTAL: ${formatTokens(total7dTokens)} TOKENS &bull; $${total7dCost.toFixed(2)} SPEND &bull; PEAK: ${escapeHtml(peakDay.tokensFormatted)} (${escapeHtml(peakDay.shortDay.toUpperCase())})</span>
       </div>
-      <div class="trend-chart-wrap">
-        ${columns}
+      <div class="trend-chart-stage">
+        <div class="trend-y-axis">
+          <span>PEAK</span>
+          <span>50%</span>
+          <span>0</span>
+        </div>
+        <div class="trend-chart-wrap">
+          <div class="trend-grid-line trend-grid-top"></div>
+          <div class="trend-grid-line trend-grid-mid"></div>
+          ${columns}
+        </div>
       </div>
     </div>
   `;
@@ -270,6 +330,10 @@ function renderTrendChartHtml(days: TrendDay[]): string {
 
 function renderActivityHeatmapHtml(activity: ActivityHeatmap): string {
   if (!activity || !activity.weeks || activity.weeks.length === 0) return '';
+
+  const weekHeaders = activity.weeks
+    .map((_, idx) => `<span class="heatmap-week-lbl">W${String(idx + 1).padStart(2, '0')}</span>`)
+    .join('');
 
   const weekCols = activity.weeks
     .map((w) => {
@@ -282,32 +346,58 @@ function renderActivityHeatmapHtml(activity: ActivityHeatmap): string {
     })
     .join('');
 
-  const activeDaysStr = `${activity.totalActiveDays}/70d Active`;
-  const totalTokensStr = `${formatTokens(activity.totalTokens)} (10 Wks)`;
+  const activeDaysStr = `${activity.totalActiveDays} / 70d`;
+  const totalTokensStr = formatTokens(activity.totalTokens);
+  const avgDailyTokens = formatTokens(Math.round(activity.totalTokens / 70));
 
   return `
     <div class="activity-section">
       <div class="activity-header">
-        <span class="activity-title">🟩 10-WEEK ACTIVITY MAP</span>
-        <span class="activity-stats">${activeDaysStr} • ${totalTokensStr}</span>
+        <span class="activity-title">02 // 10-WEEK ACTIVITY MATRIX (70-DAY DENSITY)</span>
+        <span class="activity-stats">${activity.totalActiveDays}/70 ACTIVE DAYS &bull; ${totalTokensStr} TOTAL TOKENS &bull; ${avgDailyTokens}/DAY AVG</span>
       </div>
       <div class="activity-body">
-        <div class="heatmap-days-legend">
-          <span>M</span>
-          <span>W</span>
-          <span>F</span>
-          <span>S</span>
+        <div class="heatmap-matrix-area">
+          <div class="heatmap-top-weeks">
+            <span class="heatmap-corner-spacer"></span>
+            <div class="heatmap-week-headers">${weekHeaders}</div>
+          </div>
+          <div class="heatmap-main-row">
+            <div class="heatmap-days-legend">
+              <span>MON</span>
+              <span>TUE</span>
+              <span>WED</span>
+              <span>THU</span>
+              <span>FRI</span>
+              <span>SAT</span>
+              <span>SUN</span>
+            </div>
+            <div class="heatmap-grid">
+              ${weekCols}
+            </div>
+          </div>
         </div>
-        <div class="heatmap-grid">
-          ${weekCols}
-        </div>
-        <div class="heatmap-levels-legend">
-          <span class="legend-text">Less</span>
-          <div class="heatmap-cell level-0"></div>
-          <div class="heatmap-cell level-1"></div>
-          <div class="heatmap-cell level-2"></div>
-          <div class="heatmap-cell level-3"></div>
-          <span class="legend-text">More</span>
+        <div class="heatmap-side-summary">
+          <div class="heatmap-kpi-item">
+            <span class="heatmap-kpi-lbl">ACTIVE DAYS</span>
+            <span class="heatmap-kpi-val">${activeDaysStr}</span>
+          </div>
+          <div class="heatmap-kpi-item">
+            <span class="heatmap-kpi-lbl">10W VOLUME</span>
+            <span class="heatmap-kpi-val">${totalTokensStr}</span>
+          </div>
+          <div class="heatmap-kpi-item">
+            <span class="heatmap-kpi-lbl">DAILY AVG</span>
+            <span class="heatmap-kpi-val">${avgDailyTokens}</span>
+          </div>
+          <div class="heatmap-scale-row">
+            <span class="legend-text">LESS</span>
+            <div class="heatmap-legend-swatch level-0"></div>
+            <div class="heatmap-legend-swatch level-1"></div>
+            <div class="heatmap-legend-swatch level-2"></div>
+            <div class="heatmap-legend-swatch level-3"></div>
+            <span class="legend-text">MORE</span>
+          </div>
         </div>
       </div>
     </div>
@@ -322,15 +412,18 @@ function renderProviderSplitHtml(p: ProviderBreakdown): string {
 
   return `
     <div class="provider-split-wrap">
-      <div class="provider-split-bar">
-        <div class="provider-seg-claude" style="width: ${cPct}%;"></div>
-        <div class="provider-seg-opencode" style="width: ${oPct}%;"></div>
-        <div class="provider-seg-other" style="width: ${otherPct}%;"></div>
+      <div class="provider-bar-row">
+        <span class="provider-bar-label">PROVIDER SHARE</span>
+        <div class="provider-split-bar">
+          <div class="provider-seg-claude" style="width: ${cPct}%;"></div>
+          <div class="provider-seg-opencode" style="width: ${oPct}%;"></div>
+          <div class="provider-seg-other" style="width: ${otherPct}%;"></div>
+        </div>
       </div>
       <div class="provider-legend-row">
-        <span class="provider-legend-item"><span class="legend-swatch swatch-claude"></span>Claude (${cPct}%)</span>
-        <span class="provider-legend-item"><span class="legend-swatch swatch-opencode"></span>OpenCode (${oPct}%)</span>
-        <span class="provider-legend-item"><span class="legend-swatch swatch-other"></span>Antigravity/Local (${otherPct}%)</span>
+        <span class="provider-legend-item"><span class="legend-swatch swatch-claude"></span>Claude ${formatTokens(p.claudeTokens)} (${cPct}%)</span>
+        <span class="provider-legend-item"><span class="legend-swatch swatch-opencode"></span>OpenCode ${formatTokens(p.openCodeTokens)} (${oPct}%)</span>
+        <span class="provider-legend-item"><span class="legend-swatch swatch-other"></span>Antigravity / Local ${formatTokens(p.otherTokens)} (${otherPct}%)</span>
       </div>
     </div>
   `;
@@ -342,11 +435,11 @@ function renderCompactFleetHtml(agents: DetectedAgent[]): string {
   }
 
   return agents
-    .slice(0, 8)
+    .slice(0, 6)
     .map((a) => {
       const isBusy = a.status === 'busy';
       const statusPill = isBusy
-        ? `<span class="agent-status-pill pill-busy">BUSY ⚡</span>`
+        ? `<span class="agent-status-pill pill-busy">BUSY</span>`
         : `<span class="agent-status-pill pill-idle">IDLE</span>`;
       const procTag = a.processCount > 1 ? `${a.detail} • ${a.processCount}p` : a.detail;
 
@@ -358,7 +451,7 @@ function renderCompactFleetHtml(agents: DetectedAgent[]): string {
             <span class="fleet-compact-tag">${escapeHtml(procTag)}</span>
           </div>
           <div class="fleet-compact-right">
-            <span class="fleet-compact-meta">${a.cpuPercent}% CPU • ${a.memoryMb}MB</span>
+            <span class="fleet-compact-meta">${a.cpuPercent}% • ${a.memoryMb}MB</span>
           </div>
         </div>
       `;
@@ -374,8 +467,8 @@ function getTemplatePath(): string {
 
 const TAB_NAMES: Record<1 | 2 | 3, string> = {
   1: 'Schedule & Tasks',
-  2: 'Now Playing & AI',
-  3: 'System & Devices',
+  2: 'AI Agent Command',
+  3: 'Media & System',
 };
 
 export function renderDashboardHtml(
@@ -422,13 +515,15 @@ export function renderDashboardHtml(
   html = html.replace('{{PRECIP}}', String(data.weather.precipitationProbability));
 
   // 3. TAB 1: Today's Schedule & This Week's Schedule + Tasks
+  html = html.replace('{{DAY_PROGRESS_HTML}}', renderDayProgressHtml(data));
+
   let todayEventsHtml = '';
   if (data.schedule.todayEvents.length === 0) {
     todayEventsHtml = '<div class="empty-state">No events scheduled for today</div>';
   } else {
-    for (const ev of data.schedule.todayEvents.slice(0, 6)) {
-      todayEventsHtml += renderEventItem(ev, false);
-    }
+    data.schedule.todayEvents.slice(0, 6).forEach((ev, idx) => {
+      todayEventsHtml += renderEventItem(ev, false, idx === 0);
+    });
   }
   html = html.replace('{{TODAY_EVENTS_HTML}}', todayEventsHtml);
   html = html.replace('{{TODAY_EVENT_COUNT}}', String(data.schedule.todayEvents.length));
@@ -466,7 +561,7 @@ export function renderDashboardHtml(
   html = html.replace('{{WEEK_TASKS_HTML}}', weekTasksHtml);
   html = html.replace('{{WEEK_TASK_COUNT}}', String(data.schedule.weekTasks.length));
 
-  // 4. TAB 2: Pure Media Now Playing + Pure Active AI Agents
+  // 4. TAB 2 & TAB 3: Media + Active AI Agents
   html = html.replace('{{MUSIC_TITLE}}', escapeHtml(data.music.title));
   html = html.replace('{{MUSIC_ARTIST}}', escapeHtml(data.music.artist));
   const albumText = data.music.album ? `Album: ${escapeHtml(data.music.album)}` : 'Single / Stream';
@@ -479,13 +574,13 @@ export function renderDashboardHtml(
   const durationStr = formatSeconds(data.music.duration);
   const remainingSecs = Math.max(0, data.music.duration - data.music.elapsed);
   const remainingStr = data.music.duration > 0 ? `-${formatSeconds(remainingSecs)}` : '0:00';
-  html = html.replace('{{MUSIC_ELAPSED}}', elapsedStr);
-  html = html.replace('{{MUSIC_DURATION}}', durationStr);
+  html = html.replace(/{{MUSIC_ELAPSED}}/g, elapsedStr);
+  html = html.replace(/{{MUSIC_DURATION}}/g, durationStr);
   html = html.replace('{{MUSIC_REMAINING}}', remainingStr);
 
   const artworkHtml = data.music.imageSrc
     ? `<div class="media-artwork-box"><img class="media-artwork-img" src="${escapeHtml(data.music.imageSrc)}" alt="Cover" /></div>`
-    : `<div class="media-artwork-box"><span class="media-artwork-placeholder">💿</span></div>`;
+    : `<div class="media-artwork-box"><svg class="media-artwork-svg" viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="46" fill="#151515" stroke="#000" stroke-width="2"/><circle cx="50" cy="50" r="36" fill="none" stroke="#333" stroke-width="1.5"/><circle cx="50" cy="50" r="26" fill="none" stroke="#444" stroke-width="1.5"/><circle cx="50" cy="50" r="15" fill="#fff" stroke="#000" stroke-width="2"/><circle cx="50" cy="50" r="4" fill="#000"/></svg></div>`;
   html = html.replace('{{MUSIC_ARTWORK_HTML}}', artworkHtml);
 
   const compactFleetHtml = renderCompactFleetHtml(data.agents.agents);
@@ -498,9 +593,12 @@ export function renderDashboardHtml(
   html = html.replace('{{MCP_BRIDGES_HTML}}', renderMcpBridgesHtml(data.agents.mcpBridges));
 
   html = html.replace(/{{ACTIVE_AGENT_COUNT}}/g, String(data.agents.totalRunningAgents));
+  html = html.replace(/{{ACTIVE_SESSIONS_COUNT}}/g, String(data.agents.claudeTokenStats.activeSessionsCount));
   html = html.replace('{{TODAY_TOKENS}}', formatTokens(data.agents.claudeTokenStats.todayTokens));
   html = html.replace('{{TODAY_COST}}', data.agents.claudeTokenStats.estimatedCostUsd.toFixed(2));
   html = html.replace('{{CACHE_HIT_RATE}}', String(data.agents.cacheEfficiency.hitRatePercent));
+  html = html.replace('{{CACHED_TOKENS}}', formatTokens(data.agents.cacheEfficiency.cachedTokens));
+  html = html.replace('{{PROMPT_TOKENS}}', formatTokens(data.agents.cacheEfficiency.promptTokens));
   html = html.replace('{{CACHE_SAVINGS}}', data.agents.cacheEfficiency.savingsUsd.toFixed(2));
   html = html.replace('{{TODAY_MESSAGES}}', String(data.agents.claudeTokenStats.todayMessages));
   html = html.replace('{{CLAUDE_CALLS}}', String(data.agents.claudeTokenStats.todayToolCalls));
@@ -561,7 +659,11 @@ export function renderDashboardHtml(
           <div class="mini-progress-fill" style="width: ${d.percent}%;"></div>
         </div>
       `
-      : '';
+      : `
+        <div class="mini-progress-bar mini-progress-standby">
+          <div class="mini-progress-standby-fill"></div>
+        </div>
+      `;
 
     batteryHtml += `
       <div class="battery-card-item-lg">
