@@ -1,0 +1,24 @@
+{
+  "name": "kindle-attentionboard",
+  "version": "1.0.0",
+  "description": "High-contrast ambient attention board for jailbroken Kindle and desktop",
+  "main": "dist/index.js",
+  "scripts": {
+    "build:helpers": "mkdir -p bin /tmp/swift-module-cache && swiftc -module-cache-path /tmp/swift-module-cache -O src/native/media-helper.swift -o bin/media-helper && swiftc -module-cache-path /tmp/swift-module-cache -O src/native/tasks-helper.swift -o bin/tasks-helper",
+    "build:assets": "mkdir -p dist/render && cp -r src/render/views dist/render/",
+    "build": "npm run build:helpers && tsc && npm run build:assets",
+    "start": "node dist/index.js",
+    "dev": "npm run build:helpers && ts-node src/index.ts",
+    "test": "ts-node test/collectors.test.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pngjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.2"
+  }
+}

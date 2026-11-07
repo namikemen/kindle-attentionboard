@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1236, height=1648, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Kindle AttentionBoard — Tab {{ACTIVE_TAB}}</title>
+  <link rel="stylesheet" href="/styles.css">
+  <meta http-equiv="refresh" content="{{AUTO_REFRESH_SECONDS}}">
+</head>
+<body>
+
+  <!-- Header: Clock, Date, Uptime & Weather -->
+  <header class="header-bar">
+    <div class="time-container">
+      <div class="big-clock">{{CLOCK}}</div>
+      <div class="date-block">
+        <div class="date-day">{{DAY}}</div>
+        <div class="date-full">{{DATE}}</div>
+        <div class="uptime-line">Up {{UPTIME_HOURS}}h • {{CPU_CORES}}-Core Host</div>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="weather-pill">
+        <div class="weather-temp">{{TEMP}}</div>
+        <div class="weather-details">
+          <span class="weather-cond-line">{{WEATHER_CITY}} • {{WEATHER_COND}}</span>
+          <span>Feels {{FEELS_LIKE}}° • H:{{TEMP_MAX}} L:{{TEMP_MIN}}</span>
+          <span>💧 {{HUMIDITY}}% • 💨 {{WIND_SPEED}}km/h • 🌧 {{PRECIP}}%</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 3-Tab Switcher Bar -->
+  <nav class="tab-bar" aria-label="Dashboard Tabs">
+    <a href="/?tab=1" class="tab-btn {{TAB_1_ACTIVE_CLASS}}" onclick="switchTab(event, 1)">
+      <span class="tab-num">1</span>
+      <span class="tab-label">📅 SCHEDULE &amp; TASKS</span>
+    </a>
+    <a href="/?tab=2" class="tab-btn {{TAB_2_ACTIVE_CLASS}}" onclick="switchTab(event, 2)">
+      <span class="tab-num">2</span>
+      <span class="tab-label">🎵 NOW PLAYING &amp; AI</span>
+    </a>
+    <a href="/?tab=3" class="tab-btn {{TAB_3_ACTIVE_CLASS}}" onclick="switchTab(event, 3)">
+      <span class="tab-num">3</span>
+      <span class="tab-label">⚡ SYSTEM &amp; DEVICES</span>
+    </a>
+  </nav>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 1: REMINDER & CALENDAR (TODAY + THIS WEEK SCHEDULE & TASKS)       -->
+  <!-- ===================================================================== -->
+  <main class="tab-panel {{TAB_1_PANEL_CLASS}}" id="tab-panel-1">
+    <!-- Row 1: Today's Schedule & This Week's Schedule -->
+    <div class="grid-row tab1-schedule-row">
+      <section class="card" aria-labelledby="heading-today-schedule">
+        <div class="card-header">
+          <h2 id="heading-today-schedule" class="card-title">📅 Today's Schedule</h2>
+          <span class="card-badge">{{TODAY_EVENT_COUNT}} Today</span>
+        </div>
+        <div class="item-list">
+          {{TODAY_EVENTS_HTML}}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="heading-week-schedule">
+        <div class="card-header">
+          <h2 id="heading-week-schedule" class="card-title">🗓 This Week's Schedule</h2>
+          <span class="card-badge">{{WEEK_EVENT_COUNT}} Next 7d</span>
+        </div>
+        <div class="item-list">
+          {{WEEK_EVENTS_HTML}}
+        </div>
+      </section>
+    </div>
+
+    <!-- Row 2: Today's Tasks & This Week Backlog -->
+    <div class="grid-row tab1-tasks-row">
+      <section class="card" aria-labelledby="heading-today-tasks">
+        <div class="card-header">
+          <h2 id="heading-today-tasks" class="card-title">📌 Today's Tasks</h2>
+          <span class="card-badge">{{TODAY_TASK_COUNT}} Active</span>
+        </div>
+        <div class="item-list">
+          {{TODAY_TASKS_HTML}}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="heading-week-tasks">
+        <div class="card-header">
+          <h2 id="heading-week-tasks" class="card-title">📋 This Week &amp; Backlog</h2>
+          <span class="card-badge">{{WEEK_TASK_COUNT}} Open</span>
+        </div>
+        <div class="item-list">
+          {{WEEK_TASKS_HTML}}
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 2: NOW PLAYING & ACTIVE AI AGENTS (CLEANLY SEPARATED UI)          -->
+  <!-- ===================================================================== -->
+  <main class="tab-panel {{TAB_2_PANEL_CLASS}}" id="tab-panel-2">
+    <!-- Top Card: Pure Media Now Playing -->
+    <section class="card tab2-media-card" aria-labelledby="heading-music">
+      <div class="card-header">
+        <h2 id="heading-music" class="card-title">🎵 Now Playing</h2>
+        <span class="card-badge">{{MUSIC_SOURCE}}</span>
+      </div>
+      <div class="media-showcase">
+        <div class="media-top-row">
+          <div class="media-meta-col">
+            <div class="media-state-row">
+              <span class="music-status-pill">{{MUSIC_STATUS}}</span>
+              <span class="media-source-tag">Source: {{MUSIC_SOURCE}}</span>
+            </div>
+            <div class="music-title-lg">{{MUSIC_TITLE}}</div>
+            <div class="music-artist-lg">{{MUSIC_ARTIST}}</div>
+            <div class="music-album-lg">{{MUSIC_ALBUM}}</div>
+          </div>
+          {{MUSIC_ARTWORK_HTML}}
+        </div>
+
+        <div class="media-progress-section">
+          <div class="progress-bar-container progress-bar-lg">
+            <div class="progress-bar-fill" style="width: {{MUSIC_PROGRESS}}%;"></div>
+          </div>
+          <div class="media-time-row">
+            <span class="media-time-elapsed">{{MUSIC_ELAPSED}}</span>
+            <span class="media-time-pct">{{MUSIC_PROGRESS}}% Completed</span>
+            <span class="media-time-total">{{MUSIC_REMAINING}} ({{MUSIC_DURATION}})</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Card: Pure Active AI Agents & Telemetry -->
+    <section class="card tab2-agents-card" aria-labelledby="heading-agents">
+      <div class="card-header">
+        <h2 id="heading-agents" class="card-title">🤖 Active AI Agents &amp; Telemetry</h2>
+        <span class="card-badge">{{ACTIVE_AGENT_COUNT}} Running • {{PRIMARY_MODEL}}</span>
+      </div>
+
+      <!-- AI Token & Session Telemetry Banner (Inside AI Card) -->
+      <div class="ai-telemetry-banner">
+        <div class="ai-stat-box">
+          <span class="ai-stat-val">{{TODAY_TOKENS}}</span>
+          <span class="ai-stat-lbl">Tokens Today</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-val">${{TODAY_COST}}</span>
+          <span class="ai-stat-lbl">Est. Cost</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-val">{{TODAY_MESSAGES}}</span>
+          <span class="ai-stat-lbl">Messages</span>
+        </div>
+        <div class="ai-stat-box">
+          <span class="ai-stat-val">{{CLAUDE_CALLS}}</span>
+          <span class="ai-stat-lbl">Tool Calls</span>
+        </div>
+      </div>
+
+      <!-- Running AI Agents Fleet List -->
+      <div class="agent-list-lg">
+        {{AGENTS_HTML}}
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- TAB 3: SYSTEM HEALTH (+ TOP APPS) & APPLE DEVICES BATTERY             -->
+  <!-- ===================================================================== -->
+  <main class="tab-panel {{TAB_3_PANEL_CLASS}}" id="tab-panel-3">
+    <!-- Top Card: System Health + Top Resource-Consuming Apps -->
+    <section class="card tab3-system-card" aria-labelledby="heading-system">
+      <div class="card-header">
+        <h2 id="heading-system" class="card-title">⚡ System Health &amp; Top Resource Apps</h2>
+        <span class="card-badge">Load {{LOAD_1M}} / {{LOAD_5M}} • {{CPU_CORES}} Cores</span>
+      </div>
+
+      <!-- 4-Column Hardware Gauges: CPU, GPU, RAM, DISK -->
+      <div class="system-gauges-row">
+        <div class="system-meter-lg">
+          <div class="meter-header">
+            <span class="meter-title-lg">CPU</span>
+            <span class="meter-val-lg">{{CPU_PCT}}%</span>
+          </div>
+          <div class="meter-sub-lg">User {{CPU_USER}}% • Sys {{CPU_SYS}}%</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{CPU_PCT}}%;"></div>
+          </div>
+        </div>
+
+        <div class="system-meter-lg">
+          <div class="meter-header">
+            <span class="meter-title-lg">GPU</span>
+            <span class="meter-val-lg">{{GPU_PCT}}%</span>
+          </div>
+          <div class="meter-sub-lg">{{GPU_CORES}}C • {{GPU_MEM}}MB Act ({{GPU_ALLOC}}G)</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{GPU_PCT}}%;"></div>
+          </div>
+        </div>
+
+        <div class="system-meter-lg">
+          <div class="meter-header">
+            <span class="meter-title-lg">RAM</span>
+            <span class="meter-val-lg">{{RAM_PCT}}%</span>
+          </div>
+          <div class="meter-sub-lg">{{RAM_USED}}/{{RAM_TOTAL}}GB (Comp {{RAM_COMP}}G)</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{RAM_PCT}}%;"></div>
+          </div>
+        </div>
+
+        <div class="system-meter-lg">
+          <div class="meter-header">
+            <span class="meter-title-lg">DISK</span>
+            <span class="meter-val-lg">{{DISK_PCT}}%</span>
+          </div>
+          <div class="meter-sub-lg">{{DISK_USED}}/{{DISK_TOTAL}}GB ({{DISK_FREE}}G Free)</div>
+          <div class="progress-bar-container">
+            <div class="progress-bar-fill" style="width: {{DISK_PCT}}%;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2-Column Top Apps Breakdown: Top CPU & Top Memory -->
+      <div class="top-apps-grid">
+        <div class="top-apps-col">
+          <div class="top-apps-header">🔥 Top CPU-Consuming Apps</div>
+          <div class="top-apps-list">
+            {{TOP_CPU_APPS_HTML}}
+          </div>
+        </div>
+        <div class="top-apps-col">
+          <div class="top-apps-header">🧠 Top Memory-Consuming Apps</div>
+          <div class="top-apps-list">
+            {{TOP_MEM_APPS_HTML}}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Bottom Card: Apple Ecosystem Devices Battery -->
+    <section class="card tab3-battery-card" aria-labelledby="heading-battery">
+      <div class="card-header">
+        <h2 id="heading-battery" class="card-title">🔋 Apple Ecosystem Devices</h2>
+        <span class="card-badge">{{DEVICE_COUNT}} Linked</span>
+      </div>
+      <div class="battery-grid-lg">
+        {{DEVICES_BATTERY_HTML}}
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer: Status, Tab Indicator & Sync Timestamp -->
+  <footer class="footer-bar">
+    <div class="footer-meta">Kindle Paperwhite 5 (1236×1648) • Tab {{ACTIVE_TAB}}/3 ({{ACTIVE_TAB_NAME}})</div>
+    <div class="sync-timestamp">Synced at {{LAST_SYNC}}</div>
+  </footer>
+
+  <script>
+    function switchTab(ev, tabId) {
+      if (ev) ev.preventDefault();
+      fetch('/api/tab', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tab: tabId })
+      }).finally(function() {
+        window.location.href = '/?tab=' + tabId;
+      });
+    }
+  </script>
+</body>
+</html>

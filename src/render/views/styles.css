@@ -1,0 +1,915 @@
+/* E-Ink High-Contrast 3-Tab Design System for Kindle Paperwhite 5 (1236x1648) */
+
+:root {
+  --eink-black: #000000;
+  --eink-white: #ffffff;
+  --eink-gray-light: #ebebeb;
+  --eink-gray-mid: #777777;
+  --eink-gray-dark: #2b2b2b;
+
+  --border-thin: 2.5px solid #000000;
+  --border-thick: 4px solid #000000;
+
+  --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "SF Mono", Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  max-width: 100vw;
+  max-height: 100vh;
+  background-color: var(--eink-white);
+  color: var(--eink-black);
+  font-family: var(--font-main);
+  padding: 22px 26px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+}
+
+/* ========================================================================== */
+/* HEADER BAR                                                                 */
+/* ========================================================================== */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.time-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.big-clock {
+  font-family: var(--font-mono);
+  font-size: 86px;
+  font-weight: 900;
+  line-height: 0.92;
+  letter-spacing: -2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.date-block {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.date-day {
+  font-size: 27px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.date-full {
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--eink-gray-dark);
+}
+
+.uptime-line {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.weather-pill {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border: var(--border-thin);
+  padding: 10px 18px;
+  border-radius: 10px;
+  background: var(--eink-white);
+}
+
+.weather-temp {
+  font-family: var(--font-mono);
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.weather-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.weather-cond-line {
+  font-size: 17px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* ========================================================================== */
+/* 3-TAB NAVIGATION BAR                                                       */
+/* ========================================================================== */
+.tab-bar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: var(--border-thick);
+  flex-shrink: 0;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: var(--border-thin);
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--eink-black);
+  background: var(--eink-white);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.6px;
+  cursor: pointer;
+}
+
+.tab-num {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 900;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  border: 2px solid currentColor;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-btn.tab-active {
+  background: var(--eink-black);
+  color: var(--eink-white);
+}
+
+/* ========================================================================== */
+/* TAB PANELS & SHARED CARDS                                                  */
+/* ========================================================================== */
+.tab-panel {
+  display: none;
+  flex-direction: column;
+  gap: 18px;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.tab-panel.tab-panel-active {
+  display: flex;
+}
+
+.grid-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  min-height: 0;
+}
+
+.card {
+  border: var(--border-thin);
+  border-radius: 10px;
+  padding: 18px 22px;
+  background: var(--eink-white);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: var(--border-thin);
+  padding-bottom: 10px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.card-title {
+  font-size: 22px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-badge {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  padding: 4px 12px;
+  border: 2px solid var(--eink-black);
+  border-radius: 6px;
+}
+
+/* ========================================================================== */
+/* TAB 1: SCHEDULE & TASKS (LARGE TYPOGRAPHY)                                 */
+/* ========================================================================== */
+.tab1-schedule-row {
+  flex: 1.18;
+}
+
+.tab1-tasks-row {
+  flex: 1;
+}
+
+.item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.event-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
+  border-bottom: 1.5px dotted #777;
+}
+
+.event-item:last-child {
+  border-bottom: none;
+}
+
+.event-top-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.event-time {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.event-day-pill {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border: 2px solid #000;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.event-status-pill {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 2px solid #000;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.event-status-now {
+  background: var(--eink-black);
+  color: var(--eink-white);
+}
+
+.event-title {
+  font-size: 21px;
+  font-weight: 800;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-cal-tag {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border: 1.5px solid #000;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.event-sub-row {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 2px;
+}
+
+/* Tasks */
+.task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-bottom: 1.5px dotted #777;
+}
+
+.task-item:last-child {
+  border-bottom: none;
+}
+
+.task-checkbox {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid var(--eink-black);
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.task-title {
+  font-size: 21px;
+  font-weight: 800;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.task-due {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+  flex-shrink: 0;
+}
+
+.task-tag {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 3px 9px;
+  border: 1.5px solid #000;
+  border-radius: 4px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.task-tag-urgent {
+  background: var(--eink-black);
+  color: var(--eink-white);
+}
+
+/* ========================================================================== */
+/* TAB 2: NOW PLAYING & ACTIVE AI AGENTS (SEPARATED UI)                       */
+/* ========================================================================== */
+.tab2-media-card {
+  flex: 0.78;
+}
+
+.tab2-agents-card {
+  flex: 1.22;
+}
+
+.media-showcase {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex-grow: 1;
+  gap: 18px;
+}
+
+.media-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-grow: 1;
+}
+
+.media-meta-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.media-state-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.music-status-pill {
+  font-size: 16px;
+  font-weight: 900;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  border: 2px solid var(--eink-black);
+  border-radius: 6px;
+  background: var(--eink-black);
+  color: var(--eink-white);
+}
+
+.media-source-tag {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.music-title-lg {
+  font-size: 40px;
+  font-weight: 900;
+  line-height: 1.12;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-artist-lg {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-album-lg {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-artwork-box {
+  width: 168px;
+  height: 168px;
+  border: var(--border-thick);
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--eink-gray-light);
+}
+
+.media-artwork-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: grayscale(100%) contrast(135%);
+}
+
+.media-artwork-placeholder {
+  font-size: 68px;
+  line-height: 1;
+}
+
+.media-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 14px;
+  border: 2px solid var(--eink-black);
+  border-radius: 7px;
+  overflow: hidden;
+  background: var(--eink-white);
+}
+
+.progress-bar-lg {
+  height: 20px;
+  border-width: 2.5px;
+  border-radius: 10px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: var(--eink-black);
+}
+
+.media-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 900;
+}
+
+.media-time-pct {
+  font-size: 17px;
+  color: var(--eink-gray-dark);
+}
+
+/* AI Telemetry Banner inside AI Card */
+.ai-telemetry-banner {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 16px;
+  flex-shrink: 0;
+}
+
+.ai-stat-box {
+  border: 2px solid var(--eink-black);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--eink-gray-light);
+}
+
+.ai-stat-val {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.ai-stat-lbl {
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  color: var(--eink-gray-dark);
+  margin-top: 2px;
+}
+
+/* Enlarged AI Agent Fleet List */
+.agent-list-lg {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+  overflow: hidden;
+}
+
+.agent-row-lg {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border: 2px solid #000;
+  border-radius: 8px;
+  gap: 14px;
+}
+
+.agent-left-lg {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.agent-name-lg {
+  font-size: 22px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.agent-detail-pill-lg {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border: 1.5px solid #000;
+  border-radius: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-right-lg {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.agent-meta-lg {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  font-weight: 900;
+  text-align: right;
+  min-width: 195px;
+}
+
+.agent-bar-wrap {
+  width: 110px;
+  height: 12px;
+  border: 2px solid #000;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--eink-white);
+}
+
+/* ========================================================================== */
+/* TAB 3: SYSTEM HEALTH (+ TOP APPS) & APPLE DEVICES                          */
+/* ========================================================================== */
+.tab3-system-card {
+  flex: 1.25;
+}
+
+.tab3-battery-card {
+  flex: 0.75;
+}
+
+.system-gauges-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 18px;
+  flex-shrink: 0;
+}
+
+.system-meter-lg {
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.meter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.meter-title-lg {
+  font-size: 20px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.meter-val-lg {
+  font-family: var(--font-mono);
+  font-size: 32px;
+  font-weight: 900;
+}
+
+.meter-sub-lg {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Top Resource-Consuming Apps Grid */
+.top-apps-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+  flex-grow: 1;
+  min-height: 0;
+}
+
+.top-apps-col {
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.top-apps-header {
+  font-size: 18px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border-bottom: 2px solid #000;
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+  letter-spacing: 0.5px;
+}
+
+.top-apps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-grow: 1;
+  justify-content: space-around;
+}
+
+.top-app-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1.5px dotted #888;
+}
+
+.top-app-row:last-child {
+  border-bottom: none;
+}
+
+.top-app-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-grow: 1;
+}
+
+.top-app-rank {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 900;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #000;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.top-app-name {
+  font-size: 19px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-app-procs {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--eink-gray-dark);
+  flex-shrink: 0;
+}
+
+.top-app-right {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 900;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.top-app-sub {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--eink-gray-dark);
+}
+
+/* Apple Ecosystem Battery Grid (Enlarged) */
+.battery-grid-lg {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 16px;
+  flex-grow: 1;
+  align-content: start;
+}
+
+.battery-card-item-lg {
+  border: 2px solid #000;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.battery-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.battery-dev-name-lg {
+  font-size: 20px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.battery-dev-pct-lg {
+  font-family: var(--font-mono);
+  font-size: 22px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.battery-item-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.battery-dev-detail-lg {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-progress-bar {
+  width: 100%;
+  height: 10px;
+  border: 1.5px solid #000;
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--eink-white);
+}
+
+.mini-progress-fill {
+  height: 100%;
+  background: var(--eink-black);
+}
+
+/* ========================================================================== */
+/* FOOTER                                                                     */
+/* ========================================================================== */
+.footer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: var(--border-thick);
+  padding-top: 12px;
+  margin-top: 14px;
+  flex-shrink: 0;
+}
+
+.footer-meta {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.sync-timestamp {
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 20px;
+  font-weight: 700;
+  font-style: italic;
+  color: var(--eink-gray-dark);
+}
