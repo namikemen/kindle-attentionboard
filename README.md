@@ -35,9 +35,12 @@ Every tab shares a persistent top header (**Big Clock**, **Date & Host Uptime**,
   * Direct integration with the **YouTube Music Desktop App** HTTP API (`127.0.0.1:26538/api/v1/song` and `127.0.0.1:9863/query`), plus fallback to native macOS `MediaRemote` and AppleScript (**Spotify**, **Apple Music**).
   * Displays large track title, artist, album, high-contrast grayscale album cover art, playback status (`▶ PLAYING` / `⏸ PAUSED`), and progress bar with elapsed/remaining time.
 * **Active AI Agents & Telemetry (Pure AI Card)**:
-  * **AI Telemetry Banner**: Daily token count, estimated USD cost, message count, tool call count, and primary model from `~/.claude/stats-cache.json`.
-  * **Live Multi-Agent Fleet**: Tracks running processes, version/model details, process counts, CPU %, and RSS memory (MB) for:
+  * **AI Telemetry Banner**: Aggregated daily token count, estimated USD cost, message count, tool call count, and primary model from both OpenCode (`~/.local/share/opencode/opencode.db`) and Claude (`~/.claude/stats-cache.json`).
+  * **Active Session & Task Focus**: Ambient glance of current project, active session title, in-progress step (`todo` table), active model, and agent role (`ORCHESTRATOR` / `BUILD`).
+  * **Active MCP Tool Bridges**: Real-time detection of external agent tools (e.g., `Playwright`, `Chrome DevTools`, `Apple Tools`, `Kaggle Remote`, `Context7`, `Code Review Graph`).
+  * **Live Multi-Agent Fleet**: High-contrast status pills (`[BUSY ⚡]` vs `[IDLE]`), running processes, version/model details, process counts, CPU %, and RSS memory (MB) for:
     * **Google Antigravity**
+    * **OpenCode IDE & Service Daemon** (`opencode-cli serve`)
     * **Claude Code CLI** (with active `--model` extraction)
     * **Claude Desktop**
     * **GitHub Copilot**

@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getSchedule, ScheduleData, CalendarEvent, TaskItem } from '../collectors/tasksCollector';
-import { getAgentTelemetry, AgentTelemetry } from '../collectors/agentCollector';
+import { getAgentTelemetry, AgentTelemetry, ActiveTaskFocus } from '../collectors/agentCollector';
 import { getSystemHealth, SystemHealth, TopAppUsage } from '../collectors/systemCollector';
 import { getAppleDevicesBattery, AppleDeviceBattery } from '../collectors/appleBatteryCollector';
 import { getNowPlaying, NowPlayingTrack } from '../collectors/musicCollector';
@@ -172,6 +172,62 @@ function renderTopAppRow(app: TopAppUsage, rank: number, primaryMetric: 'cpu' | 
   `;
 }
 
+function renderActiveTaskHtml(task?: ActiveTaskFocus): string {
+  if (!task) {
+    return `
+      <div class="agent-focus-box agent-focus-idle">
+        <div class="agent-focus-top">
+          <div class="agent-focus-top-left">
+            <span class="agent-status-badge badge-idle">● STANDBY</span>
+            <span class="agent-focus-project">Workspace</span>
+          </div>
+          <span class="agent-focus-model">Fleet Ready</span>
+        </div>
+        <div class="agent-focus-body">
+          <div class="agent-focus-title">No active background tasks</div>
+          <div class="agent-focus-sub">Agents idle • Ready for prompt or code edit</div>
+        </div>
+      </div>
+    `;
+  }
+
+  const isBusy = task.taskStatus === 'in_progress';
+  const badgeClass = isBusy ? 'badge-busy' : 'badge-idle';
+  const badgeText = isBusy ? '⚡ IN PROGRESS' : '● ACTIVE';
+  const roleStr = task.agentRole ? ` • ${task.agentRole.toUpperCase()}` : '';
+
+  return `
+    <div class="agent-focus-box">
+      <div class="agent-focus-top">
+        <div class="agent-focus-top-left">
+          <span class="agent-status-badge ${badgeClass}">${badgeText}</span>
+          <span class="agent-focus-project">📂 ${escapeHtml(task.projectName)}</span>
+        </div>
+        <span class="agent-focus-model">${escapeHtml(task.modelName)}${escapeHtml(roleStr)}</span>
+      </div>
+      <div class="agent-focus-body">
+        <div class="agent-focus-title">${escapeHtml(task.sessionTitle)}</div>
+        <div class="agent-focus-sub">${escapeHtml(task.taskTitle)}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderMcpBridgesHtml(bridges: string[]): string {
+  if (!bridges || bridges.length === 0) {
+    return '';
+  }
+  const tags = bridges.map((b) => `<span class="mcp-bridge-pill">${escapeHtml(b)}</span>`).join('');
+  return `
+    <div class="mcp-bridges-row">
+      <span class="mcp-bridges-label">TOOLS &amp; BRIDGES</span>
+      <div class="mcp-bridges-list">
+        ${tags}
+      </div>
+    </div>
+  `;
+}
+
 function getTemplatePath(): string {
   const localPath = path.resolve(__dirname, 'views/dashboard.html');
   if (fs.existsSync(localPath)) return localPath;
@@ -306,13 +362,17 @@ export function renderDashboardHtml(
     `;
   } else {
     for (const a of data.agents.agents.slice(0, 6)) {
-      const statusIcon = a.status === 'busy' ? '⚡' : '●';
+      const isBusy = a.status === 'busy';
+      const statusBadge = isBusy
+        ? `<span class="agent-status-pill pill-busy">BUSY ⚡</span>`
+        : `<span class="agent-status-pill pill-idle">IDLE</span>`;
       const procBadge = a.processCount > 1 ? `${a.detail} • ${a.processCount}p` : a.detail;
-      const barPct = Math.min(100, Math.max(6, Math.round(a.cpuPercent * 3 + (a.memoryMb / 1024) * 35)));
+      const barPct = Math.min(100, Math.max(8, Math.round(a.cpuPercent * 2.5 + (a.memoryMb / 1024) * 30)));
       agentsHtml += `
         <div class="agent-row-lg">
           <div class="agent-left-lg">
-            <span class="agent-name-lg">${statusIcon} ${escapeHtml(a.name)}</span>
+            ${statusBadge}
+            <span class="agent-name-lg">${escapeHtml(a.name)}</span>
             <span class="agent-detail-pill-lg">${escapeHtml(procBadge)}</span>
           </div>
           <div class="agent-right-lg">
@@ -325,6 +385,8 @@ export function renderDashboardHtml(
       `;
     }
   }
+  html = html.replace('{{ACTIVE_TASK_HTML}}', renderActiveTaskHtml(data.agents.activeTask));
+  html = html.replace('{{MCP_BRIDGES_HTML}}', renderMcpBridgesHtml(data.agents.mcpBridges));
   html = html.replace('{{AGENTS_HTML}}', agentsHtml);
   html = html.replace('{{ACTIVE_AGENT_COUNT}}', String(data.agents.totalRunningAgents));
   html = html.replace('{{TODAY_TOKENS}}', formatTokens(data.agents.claudeTokenStats.todayTokens));

@@ -393,11 +393,11 @@ body {
 /* TAB 2: NOW PLAYING & ACTIVE AI AGENTS (SEPARATED UI)                       */
 /* ========================================================================== */
 .tab2-media-card {
-  flex: 0.78;
+  flex: 0.72;
 }
 
 .tab2-agents-card {
-  flex: 1.22;
+  flex: 1.28;
 }
 
 .media-showcase {
@@ -577,6 +577,133 @@ body {
   margin-top: 2px;
 }
 
+/* Active Session / Task Focus Card */
+.agent-focus-box {
+  border: 2px solid var(--eink-black);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  background: var(--eink-white);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.agent-focus-idle {
+  background: var(--eink-gray-light);
+}
+
+.agent-focus-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agent-focus-top-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.agent-status-badge {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.badge-busy {
+  background: var(--eink-black);
+  color: var(--eink-white);
+  border: 1.5px solid var(--eink-black);
+}
+
+.badge-idle {
+  background: var(--eink-white);
+  color: var(--eink-black);
+  border: 1.5px solid var(--eink-black);
+}
+
+.agent-focus-project {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.agent-focus-model {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--eink-gray-dark);
+}
+
+.agent-focus-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.agent-focus-title {
+  font-size: 19px;
+  font-weight: 900;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.agent-focus-sub {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Active MCP Tool Bridges Strip */
+.mcp-bridges-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.mcp-bridges-label {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--eink-gray-dark);
+  white-space: nowrap;
+}
+
+.mcp-bridges-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.mcp-bridge-pill {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border: 1.5px solid var(--eink-black);
+  border-radius: 4px;
+  background: var(--eink-gray-light);
+  white-space: nowrap;
+}
+
 /* Enlarged AI Agent Fleet List */
 .agent-list-lg {
   display: flex;
@@ -602,6 +729,28 @@ body {
   gap: 12px;
   min-width: 0;
   flex-grow: 1;
+}
+
+.agent-status-pill {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.pill-busy {
+  background: var(--eink-black);
+  color: var(--eink-white);
+  border: 1.5px solid var(--eink-black);
+}
+
+.pill-idle {
+  background: var(--eink-white);
+  color: var(--eink-black);
+  border: 1.5px solid var(--eink-black);
 }
 
 .agent-name-lg {

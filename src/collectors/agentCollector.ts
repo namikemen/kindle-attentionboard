@@ -10,7 +10,7 @@ const execAsync = promisify(exec);
 
 export interface DetectedAgent {
   name: string;
-  category: 'antigravity' | 'claude' | 'copilot' | 'codex' | 'zed' | 'cursor' | 'mcp' | 'other';
+  category: 'antigravity' | 'claude' | 'copilot' | 'codex' | 'zed' | 'cursor' | 'opencode' | 'mcp' | 'other';
   pid: number;
   cpuPercent: number;
   memoryMb: number;
@@ -20,9 +20,20 @@ export interface DetectedAgent {
   commandPreview: string;
 }
 
+export interface ActiveTaskFocus {
+  sessionTitle: string;
+  projectName: string;
+  taskTitle: string;
+  taskStatus: 'in_progress' | 'pending' | 'completed' | 'idle';
+  modelName: string;
+  agentRole: string;
+}
+
 export interface AgentTelemetry {
   totalRunningAgents: number;
   agents: DetectedAgent[];
+  activeTask?: ActiveTaskFocus;
+  mcpBridges: string[];
   claudeTokenStats: {
     todayTokens: number;
     todayMessages: number;
@@ -44,6 +55,18 @@ const AGENT_SIGNATURES: Array<{
     name: 'Google Antigravity',
     category: 'antigravity',
     defaultDetail: 'IDE + Agent Hub',
+  },
+  {
+    pattern: /\/Applications\/OpenCode\.app/i,
+    name: 'OpenCode IDE',
+    category: 'opencode',
+    defaultDetail: 'AI Editor',
+  },
+  {
+    pattern: /opencode-cli\s+serve|opencode-pty|opencode\s+daemon/i,
+    name: 'OpenCode Service',
+    category: 'opencode',
+    defaultDetail: 'Daemon & Tools',
   },
   {
     pattern: /claude-code\/.*\/claude\.app\/Contents\/MacOS\/claude|(?:^|\s|\/)claude\s+--/i,
@@ -94,11 +117,26 @@ const AGENT_SIGNATURES: Array<{
     defaultDetail: 'Local Runtime',
   },
   {
-    pattern: /chrome-devtools-mcp|apple-tools-mcp|mcp-remote|code-review-graph|biomolecular_structure_viewer_mcp/i,
+    pattern: /chrome-devtools-mcp|apple-tools-mcp|mcp-remote|code-review-graph|biomolecular_structure_viewer_mcp|@playwright\/mcp/i,
     name: 'MCP Tool Servers',
     category: 'mcp',
     defaultDetail: 'Active Bridges',
   },
+];
+
+const MCP_BRIDGE_SIGNATURES: Array<{ pattern: RegExp; name: string }> = [
+  { pattern: /apple-tools-mcp/i, name: 'Apple Tools' },
+  { pattern: /chrome-devtools-mcp/i, name: 'Chrome DevTools' },
+  { pattern: /@playwright\/mcp|playwright-mcp/i, name: 'Playwright' },
+  { pattern: /mcp-remote.*kaggle\.com/i, name: 'Kaggle Remote' },
+  { pattern: /mcp-remote/i, name: 'MCP Remote' },
+  { pattern: /telegram.*mcp|mcp.*telegram/i, name: 'Telegram' },
+  { pattern: /code-review-graph/i, name: 'Code Review Graph' },
+  { pattern: /biomolecular_structure_viewer_mcp/i, name: 'Biomol Viewer' },
+  { pattern: /filesystem.*mcp|mcp-server-filesystem/i, name: 'Filesystem' },
+  { pattern: /sqlite.*mcp|mcp-server-sqlite/i, name: 'SQLite' },
+  { pattern: /context7/i, name: 'Context7' },
+  { pattern: /gh_grep|github-grep/i, name: 'GitHub Grep' },
 ];
 
 function getTodayString(): string {
@@ -109,7 +147,13 @@ function getTodayString(): string {
   return `${year}-${month}-${day}`;
 }
 
-function parseClaudeStatsCache(): {
+function getStartOfTodayMs(): number {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+function parseClaudeStatsCache(today: string): {
   todayTokens: number;
   todayMessages: number;
   todayToolCalls: number;
@@ -120,7 +164,7 @@ function parseClaudeStatsCache(): {
     todayTokens: 0,
     todayMessages: 0,
     todayToolCalls: 0,
-    primaryModel: 'claude-opus / sonnet',
+    primaryModel: 'claude-sonnet',
     estimatedCostUsd: 0,
   };
 
@@ -131,15 +175,13 @@ function parseClaudeStatsCache(): {
 
   try {
     const raw = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
-    const today = getTodayString();
 
     let todayTokens = 0;
     let todayMessages = 0;
     let todayToolCalls = 0;
 
     if (Array.isArray(raw.dailyActivity)) {
-      const todayActivity = raw.dailyActivity.find((item: { date: string }) => item.date === today)
-        || raw.dailyActivity[raw.dailyActivity.length - 1];
+      const todayActivity = raw.dailyActivity.find((item: { date: string }) => item.date === today);
       if (todayActivity) {
         todayMessages = todayActivity.messageCount || 0;
         todayToolCalls = todayActivity.toolCallCount || 0;
@@ -147,8 +189,7 @@ function parseClaudeStatsCache(): {
     }
 
     if (Array.isArray(raw.dailyModelTokens)) {
-      const todayModelTokens = raw.dailyModelTokens.find((item: { date: string }) => item.date === today)
-        || raw.dailyModelTokens[raw.dailyModelTokens.length - 1];
+      const todayModelTokens = raw.dailyModelTokens.find((item: { date: string }) => item.date === today);
       if (todayModelTokens && typeof todayModelTokens === 'object') {
         for (const [key, val] of Object.entries(todayModelTokens)) {
           if (key !== 'date' && typeof val === 'number') {
@@ -186,8 +227,132 @@ function parseClaudeStatsCache(): {
   }
 }
 
+async function parseOpenCodeData(startOfTodayMs: number): Promise<{
+  todayTokens: number;
+  todayMessages: number;
+  todayToolCalls: number;
+  estimatedCostUsd: number;
+  activeTask?: ActiveTaskFocus;
+  primaryModel?: string;
+}> {
+  const result = {
+    todayTokens: 0,
+    todayMessages: 0,
+    todayToolCalls: 0,
+    estimatedCostUsd: 0,
+    activeTask: undefined as ActiveTaskFocus | undefined,
+    primaryModel: undefined as string | undefined,
+  };
+
+  const dbPath = path.join(os.homedir(), '.local/share/opencode/opencode.db');
+  if (!fs.existsSync(dbPath)) {
+    return result;
+  }
+
+  try {
+    const query = `
+      SELECT 
+        count(*),
+        COALESCE(sum(json_extract(data, '$.tokens.input') + json_extract(data, '$.tokens.output') + json_extract(data, '$.tokens.cache.read')), 0),
+        COALESCE(sum(json_extract(data, '$.cost')), 0)
+      FROM message
+      WHERE time_created >= ${startOfTodayMs};
+      SELECT count(*)
+      FROM part
+      WHERE json_extract(data, '$.type') = 'tool' AND time_created >= ${startOfTodayMs};
+      SELECT t.content, t.status, s.title, s.directory, s.model, s.agent
+      FROM todo t
+      JOIN session s ON t.session_id = s.id
+      WHERE t.status = 'in_progress'
+      ORDER BY t.time_updated DESC
+      LIMIT 1;
+      SELECT s.id, s.title, s.directory, s.agent, s.model, s.time_updated
+      FROM session s
+      ORDER BY s.time_updated DESC
+      LIMIT 1;
+    `;
+
+    const { stdout } = await execAsync(`sqlite3 "file:${dbPath}?mode=ro" "${query.replace(/\n\s+/g, ' ')}"`, {
+      timeout: 2000,
+    });
+
+    const lines = stdout.trim().split('\n').map((l) => l.trim());
+    if (lines.length >= 2) {
+      const statsParts = lines[0].split('|');
+      result.todayMessages = parseInt(statsParts[0], 10) || 0;
+      result.todayTokens = Math.round(parseFloat(statsParts[1]) || 0);
+      result.estimatedCostUsd = parseFloat((parseFloat(statsParts[2]) || 0).toFixed(2));
+
+      result.todayToolCalls = parseInt(lines[1], 10) || 0;
+    }
+
+    // Line 3: in_progress task (if any)
+    if (lines.length >= 3 && lines[2]) {
+      const parts = lines[2].split('|');
+      if (parts.length >= 4) {
+        const content = parts[0];
+        const status = parts[1] as 'in_progress' | 'pending';
+        const sessionTitle = parts[2] || 'Active Session';
+        const directory = parts[3] || 'Workspace';
+        let modelName = 'opencode';
+        let agentRole = parts[5] || 'agent';
+
+        try {
+          const modelObj = JSON.parse(parts[4]);
+          if (modelObj && modelObj.id) modelName = modelObj.id;
+        } catch {
+          if (parts[4]) modelName = parts[4];
+        }
+
+        result.activeTask = {
+          sessionTitle,
+          projectName: path.basename(directory),
+          taskTitle: content,
+          taskStatus: status,
+          modelName,
+          agentRole,
+        };
+        result.primaryModel = modelName;
+      }
+    }
+
+    // Line 4: latest session (fallback if no active in_progress task)
+    if (!result.activeTask && lines.length >= 4 && lines[3]) {
+      const parts = lines[3].split('|');
+      if (parts.length >= 3) {
+        const sessionTitle = parts[1] || 'Standby';
+        const directory = parts[2] || 'Workspace';
+        const agentRole = parts[3] || 'agent';
+        let modelName = 'opencode';
+
+        try {
+          const modelObj = JSON.parse(parts[4]);
+          if (modelObj && modelObj.id) modelName = modelObj.id;
+        } catch {
+          if (parts[4]) modelName = parts[4];
+        }
+
+        result.activeTask = {
+          sessionTitle,
+          projectName: path.basename(directory),
+          taskTitle: 'Session ready for prompt',
+          taskStatus: 'idle',
+          modelName,
+          agentRole,
+        };
+        result.primaryModel = modelName;
+      }
+    }
+  } catch {
+    // OpenCode SQLite reading fallback
+  }
+
+  return result;
+}
+
 export async function getAgentTelemetry(): Promise<AgentTelemetry> {
   const detectedAgents: DetectedAgent[] = [];
+  const activeMcpBridges = new Set<string>();
 
   try {
     const { stdout } = await execAsync('ps -eo pid,%cpu,rss,command', { timeout: 3000 });
@@ -214,10 +379,18 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
         continue;
       }
 
+      // Check for specific named MCP tool server bridges
+      for (const mcpSig of MCP_BRIDGE_SIGNATURES) {
+        if (mcpSig.pattern.test(cmd)) {
+          activeMcpBridges.add(mcpSig.name);
+        }
+      }
+
       for (const sig of AGENT_SIGNATURES) {
         if (sig.pattern.test(cmd)) {
           const rssMb = Math.round(rssKb / 1024);
           let extractedDetail = '';
+
           const modelMatch = cmd.match(/--model[=\s]+([^\s"]+)/);
           if (modelMatch) {
             extractedDetail = modelMatch[1].replace(/\[.*\]/, '');
@@ -256,27 +429,72 @@ export async function getAgentTelemetry(): Promise<AgentTelemetry> {
     // Process list failure fallback
   }
 
+  // Update MCP agent entry with detected named bridges if any
+  const mcpAgent = detectedAgents.find((a) => a.category === 'mcp');
+  if (mcpAgent && activeMcpBridges.size > 0) {
+    mcpAgent.detail = `${activeMcpBridges.size} Active (${Array.from(activeMcpBridges).slice(0, 2).join(', ')})`;
+  }
+
   // Sort agents: active/busy or primary coding agents first
   detectedAgents.sort((a, b) => {
+    if (a.status === 'busy' && b.status !== 'busy') return -1;
+    if (b.status === 'busy' && a.status !== 'busy') return 1;
     if (a.category === 'mcp' && b.category !== 'mcp') return 1;
     if (b.category === 'mcp' && a.category !== 'mcp') return -1;
     return b.cpuPercent - a.cpuPercent || b.memoryMb - a.memoryMb;
   });
 
-  const claudeStats = parseClaudeStatsCache();
+  const todayStr = getTodayString();
+  const startOfTodayMs = getStartOfTodayMs();
+
+  const claudeStats = parseClaudeStatsCache(todayStr);
+  const openCodeData = await parseOpenCodeData(startOfTodayMs);
+
+  // Determine active task focus
+  let activeTask = openCodeData.activeTask;
+
+  // If Claude Code CLI is busy, emphasize it as the primary active task
   const claudeCli = detectedAgents.find((a) => a.name === 'Claude Code CLI');
-  if (claudeCli && claudeCli.detail && claudeCli.detail !== 'Agent Session') {
-    claudeStats.primaryModel = claudeCli.detail;
+  if (claudeCli) {
+    if (claudeCli.detail && claudeCli.detail !== 'Agent Session') {
+      claudeStats.primaryModel = claudeCli.detail;
+    }
+    if (claudeCli.status === 'busy' && (!activeTask || activeTask.taskStatus !== 'in_progress')) {
+      activeTask = {
+        sessionTitle: 'Claude Code CLI Session',
+        projectName: 'Workspace',
+        taskTitle: 'Autonomous agent execution in progress',
+        taskStatus: 'in_progress',
+        modelName: claudeCli.detail || 'claude-opus-5',
+        agentRole: 'claude',
+      };
+    }
   }
+
+  const primaryModel =
+    claudeCli?.detail && claudeCli.detail !== 'Agent Session'
+      ? claudeCli.detail
+      : openCodeData.primaryModel || claudeStats.primaryModel;
+
+  const totalTokens = claudeStats.todayTokens + openCodeData.todayTokens;
+  const totalMessages = claudeStats.todayMessages + openCodeData.todayMessages;
+  const totalToolCalls = claudeStats.todayToolCalls + openCodeData.todayToolCalls;
+  const totalCost = parseFloat((claudeStats.estimatedCostUsd + openCodeData.estimatedCostUsd).toFixed(2));
 
   return {
     totalRunningAgents: detectedAgents.length,
     agents: detectedAgents,
+    activeTask,
+    mcpBridges: Array.from(activeMcpBridges),
     claudeTokenStats: {
-      ...claudeStats,
+      todayTokens: totalTokens,
+      todayMessages: totalMessages,
+      todayToolCalls: totalToolCalls,
       activeSessionsCount: detectedAgents
-        .filter((a) => a.category === 'claude' || a.category === 'antigravity')
+        .filter((a) => a.category === 'claude' || a.category === 'antigravity' || a.category === 'opencode')
         .reduce((acc, item) => acc + item.processCount, 0),
+      primaryModel,
+      estimatedCostUsd: totalCost,
     },
   };
 }
