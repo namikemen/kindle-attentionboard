@@ -653,7 +653,7 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  flex: 1.08;
+  flex: 1.12;
   min-height: 0;
 }
 
@@ -812,6 +812,8 @@ body {
 
 /* Row 2 (Full Width): Expanded 10-Week Activity Heatmap */
 .activity-section {
+  --hm-cell: clamp(20px, 2.4vh, 40px);
+  --hm-gap: 6px;
   border: var(--border-thin);
   border-radius: var(--radius-sharp);
   padding: 12px 16px;
@@ -819,13 +821,13 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  flex: 1.22;
+  flex: 1.0;
   min-height: 0;
 }
 
 .activity-body {
   display: flex;
-  align-items: stretch;
+  align-items: center;
   justify-content: space-between;
   gap: 18px;
   flex: 1;
@@ -835,7 +837,7 @@ body {
 .heatmap-matrix-area {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 0 0 auto;
   gap: 5px;
   min-height: 0;
 }
@@ -854,9 +856,9 @@ body {
 
 .heatmap-week-headers {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 6px;
-  flex: 1;
+  grid-template-columns: repeat(10, var(--hm-cell));
+  gap: var(--hm-gap);
+  flex: 0 0 auto;
 }
 
 .heatmap-week-lbl {
@@ -877,8 +879,8 @@ body {
 
 .heatmap-days-legend {
   display: grid;
-  grid-template-rows: repeat(7, 1fr);
-  gap: 4px;
+  grid-template-rows: repeat(7, var(--hm-cell));
+  gap: var(--hm-gap);
   width: 34px;
   flex-shrink: 0;
   font-family: var(--font-mono);
@@ -890,22 +892,22 @@ body {
 
 .heatmap-grid {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
-  gap: 6px;
-  flex: 1;
+  grid-template-columns: repeat(10, var(--hm-cell));
+  gap: var(--hm-gap);
+  flex: 0 0 auto;
   min-height: 0;
 }
 
 .heatmap-col {
   display: grid;
-  grid-template-rows: repeat(7, 1fr);
-  gap: 4px;
+  grid-template-rows: repeat(7, var(--hm-cell));
+  gap: var(--hm-gap);
 }
 
 .heatmap-cell {
-  width: 100%;
-  height: 100%;
-  min-height: 14px;
+  width: var(--hm-cell);
+  height: var(--hm-cell);
+  min-height: 0;
   border-radius: 2px;
 }
 
@@ -1709,4 +1711,192 @@ body {
   color: var(--eink-gray-mid);
   padding: 20px 0;
   text-align: center;
+}
+
+/* ========================================================================== */
+/* LAPTOP / SMALL-VIEWPORT FALLBACK                                           */
+/* The dashboard is authored for Kindle Paperwhite 5 (1236x1648 portrait).    */
+/* Below that canvas we stop squeezing the flex layout: cards grow with their */
+/* content and the page scrolls instead of collapsing charts into slivers.    */
+/* ========================================================================== */
+@media (max-height: 1560px), (max-width: 1100px) {
+  body {
+    width: 100%;
+    height: auto;
+    min-height: 100vh;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    justify-content: flex-start;
+    padding: 14px 16px;
+  }
+
+  /* Header: keep clock and weather legible on one line */
+  .header-bar {
+    flex-wrap: nowrap;
+    gap: 14px;
+  }
+
+  .time-container {
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .big-clock {
+    font-size: clamp(44px, 6vw, 64px);
+    letter-spacing: -1.5px;
+  }
+
+  .date-day {
+    font-size: 18px;
+  }
+
+  .date-full {
+    font-size: 14px;
+  }
+
+  .uptime-line {
+    font-size: 11px;
+  }
+
+  .weather-pill {
+    gap: 10px;
+    padding: 6px 10px;
+  }
+
+  .weather-temp {
+    font-size: clamp(26px, 3.4vw, 34px);
+  }
+
+  .weather-cond-line {
+    font-size: 12px;
+  }
+
+  .weather-details {
+    font-size: 10px;
+  }
+
+  /* Tabs: keep labels on a single line */
+  .tab-bar {
+    padding: 10px 0;
+    gap: 8px;
+  }
+
+  .tab-btn {
+    font-size: 13px;
+    padding: 8px;
+    gap: 6px;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+
+  .tab-num {
+    font-size: 11px;
+  }
+
+  /* Cards size to content; the page scrolls instead of clipping */
+  .tab-panel {
+    flex: 0 0 auto;
+    min-height: 0;
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  .grid-row {
+    min-height: 0;
+  }
+
+  .card {
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  /* AI telemetry: five compact columns that never clip */
+  .ai-telemetry-banner {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .ai-stat-box {
+    padding: 8px;
+    min-width: 0;
+  }
+
+  .ai-stat-val {
+    font-size: clamp(18px, 2.4vw, 24px);
+  }
+
+  .ai-stat-unit {
+    font-size: 11px;
+  }
+
+  .ai-stat-lbl {
+    font-size: 10px;
+  }
+
+  .ai-stat-sub {
+    font-size: 9px;
+    white-space: nowrap;
+  }
+
+  /* Analytics: keep a legible minimum height instead of collapsing to 0 */
+  .trend-header,
+  .activity-header {
+    flex-wrap: wrap;
+    gap: 2px 12px;
+  }
+
+  .trend-title,
+  .activity-title {
+    font-size: 12px;
+    letter-spacing: 0.4px;
+  }
+
+  .trend-sub,
+  .activity-stats {
+    font-size: 10px;
+  }
+
+  .trend-section {
+    flex: 0 0 auto;
+    min-height: 214px;
+  }
+
+  .activity-section {
+    flex: 0 0 auto;
+    min-height: 280px;
+    --hm-cell: 20px;
+  }
+
+  .trend-chart-stage {
+    min-height: 132px;
+  }
+
+  .trend-chart-wrap {
+    min-height: 132px;
+  }
+
+  .trend-bar-track {
+    min-height: 84px;
+  }
+
+  .fleet-compact-card,
+  .telemetry-mid-deck {
+    flex: 0 0 auto;
+  }
+
+  .footer-bar {
+    margin-top: 14px;
+    font-size: 11px;
+  }
+}
+
+/* Narrow windows: stack side-by-side cards so fixed-width rows never clip. */
+@media (max-width: 1050px) {
+  .grid-row,
+  .top-apps-grid,
+  .battery-grid-lg {
+    grid-template-columns: 1fr;
+  }
 }
