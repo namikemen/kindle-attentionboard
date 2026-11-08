@@ -5,6 +5,7 @@ import { getSchedule } from '../src/collectors/tasksCollector';
 import { getSystemHealth } from '../src/collectors/systemCollector';
 import { getAppleDevicesBattery } from '../src/collectors/appleBatteryCollector';
 import { getWeatherData } from '../src/collectors/weatherCollector';
+import { getSubscriptionQuota } from '../src/collectors/subscriptionCollector';
 import { gatherDashboardData, renderDashboardHtml } from '../src/render/templateRenderer';
 
 async function runTests() {
@@ -60,7 +61,17 @@ async function runTests() {
   assert.ok(typeof weather.condition === 'string', 'weather.condition should be a string');
   console.log(`✓ Weather collector passed (${weather.temperature}°C, ${weather.condition} in ${weather.city})`);
 
-  // 7. Template Renderer (All 3 Tabs)
+  // 7. Subscription Quota Collector (Google AI Pro / Antigravity)
+  console.log('Testing: subscriptionCollector...');
+  const quota = await getSubscriptionQuota();
+  assert.ok(typeof quota.available === 'boolean', 'quota.available should be a boolean');
+  assert.ok(Array.isArray(quota.providers), 'quota.providers should be an array');
+  for (const p of quota.providers) {
+    assert.ok(Array.isArray(p.windows), `provider "${p.name}" windows should be an array`);
+  }
+  console.log(`✓ Subscription quota passed (available: ${quota.available}, providers: ${quota.providers.length}${quota.error ? `, error: ${quota.error}` : ''})`);
+
+  // 8. Template Renderer (All 3 Tabs)
   console.log('Testing: templateRenderer (Tabs 1, 2, 3)...');
   const data = await gatherDashboardData();
   for (const tabId of [1, 2, 3] as const) {

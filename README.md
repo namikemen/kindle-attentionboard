@@ -40,6 +40,7 @@ Every tab shares a persistent top header (**Big Clock**, **Date & Host Uptime**,
   * **📊 7-Day Token & Spend Trend Chart**: High-contrast daily bar chart of API token volume across the week with day labels (`Sun 01` ... `TODAY`).
   * **🟩 10-Week Activity Heatmap**: 70-day contribution grid (Mon–Sun) mapping daily coding activity levels (less → more) and 10-week totals.
   * **Provider Distribution Multi-Bar**: Proportional segmented bar visualizing the token/cost split between **Claude**, **OpenCode**, and **Antigravity/Local**.
+  * **Google AI Pro Subscription Quotas**: Remaining **5-hour** and **weekly** limits for Gemini, Claude/GPT, and Gemini 4 Argon scopes, read live from the local Antigravity CLI (`agy --print "/usage"`). Cached for 5 minutes and shown with weekly reset dates.
   * **Active MCP Tool Bridges**: Real-time detection of external agent tools (e.g., `Playwright`, `Chrome DevTools`, `Apple Tools`, `Kaggle Remote`, `Context7`, `Code Review Graph`).
   * **⚡ Compact Fleet Runtime**: High-density list with status pills (`[BUSY ⚡]` vs `[IDLE]`), running processes, version/model details, process counts, CPU %, and RSS memory (MB) for:
     * **Google Antigravity**

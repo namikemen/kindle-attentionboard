@@ -44,6 +44,34 @@ export function buildDemoDashboard(): DashboardPayload {
       source: 'Spotify',
     },
 
+    subscriptionQuota: {
+      available: true,
+      provider: 'GOOGLE AI PRO',
+      providers: [
+        {
+          name: 'Gemini Models',
+          windows: [
+            { label: '5-HOUR', remainingPercent: 97, resetAt: new Date(now.getTime() + 3 * 3600 * 1000).toISOString() },
+            { label: 'WEEKLY', remainingPercent: 42, resetAt: new Date(now.getTime() + 6 * 24 * 3600 * 1000).toISOString() },
+          ],
+        },
+        {
+          name: 'Claude and GPT models',
+          windows: [
+            { label: '5-HOUR', remainingPercent: 100, resetAt: new Date(now.getTime() + 4 * 3600 * 1000).toISOString() },
+            { label: 'WEEKLY', remainingPercent: 100, resetAt: new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString() },
+          ],
+        },
+        {
+          name: 'Gemini 4 Argon',
+          windows: [
+            { label: 'WEEKLY', remainingPercent: 85, resetAt: new Date(now.getTime() + 5 * 24 * 3600 * 1000).toISOString() },
+          ],
+        },
+      ],
+      fetchedAt: now.toISOString(),
+    },
+
     agents: {
       totalRunningAgents: 6,
       activeTask: {

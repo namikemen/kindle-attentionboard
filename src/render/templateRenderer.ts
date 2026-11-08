@@ -14,6 +14,10 @@ import { getSystemHealth, SystemHealth, TopAppUsage } from '../collectors/system
 import { getAppleDevicesBattery, AppleDeviceBattery } from '../collectors/appleBatteryCollector';
 import { getNowPlaying, NowPlayingTrack } from '../collectors/musicCollector';
 import { getWeatherData, WeatherData } from '../collectors/weatherCollector';
+import {
+  getSubscriptionQuota,
+  SubscriptionQuota,
+} from '../collectors/subscriptionCollector';
 import { timerManager, TimerState } from '../collectors/timerManager';
 import { config } from '../config';
 import { buildDemoDashboard } from './demoData';
@@ -25,6 +29,7 @@ export interface DashboardPayload {
   devices: AppleDeviceBattery[];
   music: NowPlayingTrack;
   weather: WeatherData;
+  subscriptionQuota: SubscriptionQuota;
   timer: TimerState;
   clock: {
     time: string;
@@ -40,13 +45,14 @@ export async function gatherDashboardData(forceDemo: boolean = false): Promise<D
     return buildDemoDashboard();
   }
 
-  const [schedule, agents, system, devices, music, weather] = await Promise.all([
+  const [schedule, agents, system, devices, music, weather, subscriptionQuota] = await Promise.all([
     getSchedule(),
     getAgentTelemetry(),
     getSystemHealth(),
     getAppleDevicesBattery(),
     getNowPlaying(),
     getWeatherData(),
+    getSubscriptionQuota(),
   ]);
 
   const now = new Date();
@@ -61,6 +67,7 @@ export async function gatherDashboardData(forceDemo: boolean = false): Promise<D
     devices,
     music,
     weather,
+    subscriptionQuota,
     timer: timerManager.getState(),
     clock: { time, day, date },
   };
@@ -459,6 +466,45 @@ function renderCompactFleetHtml(agents: DetectedAgent[]): string {
     .join('');
 }
 
+function renderQuotaWindowsHtml(quota: SubscriptionQuota): string {
+  const listOpen = '<div class="quota-window-list">';
+  if (!quota || !quota.available || !quota.providers || quota.providers.length === 0) {
+    return `${listOpen}<div class="quota-empty">QUOTA UNAVAILABLE</div></div>`;
+  }
+
+  const providerCols = quota.providers
+    .map((provider) => {
+      const rows = provider.windows
+        .map((w) => {
+          const pct = Math.min(100, Math.max(0, w.remainingPercent));
+          const lbl = w.label === '5-HOUR' ? '5H' : w.label === 'WEEKLY' ? 'WK' : w.label;
+          return `<div class="quota-window-row"><span class="quota-window-lbl">${escapeHtml(lbl)}</span><div class="quota-bar"><div class="quota-bar-fill" style="width:${pct}%"></div></div><span class="quota-window-pct">${pct}%</span></div>`;
+        })
+        .join('');
+
+      const weekly = provider.windows.find((w) => w.label === 'WEEKLY');
+      const fiveHour = provider.windows.find((w) => w.label === '5-HOUR');
+      let resetLine = '';
+      const weeklyReset = weekly && weekly.resetAt ? new Date(weekly.resetAt) : null;
+      if (weeklyReset && !Number.isNaN(weeklyReset.getTime())) {
+        const mon = weeklyReset.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+        resetLine = `<div class="quota-reset">WK RESET ${mon} ${weeklyReset.getDate()}</div>`;
+      } else if (fiveHour && fiveHour.resetAt) {
+        const d5 = new Date(fiveHour.resetAt);
+        if (!Number.isNaN(d5.getTime())) {
+          const hh = String(d5.getHours()).padStart(2, '0');
+          const mm = String(d5.getMinutes()).padStart(2, '0');
+          resetLine = `<div class="quota-reset">5H RESET ${hh}:${mm}</div>`;
+        }
+      }
+
+      return `<div class="quota-provider-col"><div class="quota-provider-name">${escapeHtml(provider.name)}</div>${rows}${resetLine}</div>`;
+    })
+    .join('');
+
+  return `${listOpen}${providerCols}</div>`;
+}
+
 function getTemplatePath(): string {
   const localPath = path.resolve(__dirname, 'views/dashboard.html');
   if (fs.existsSync(localPath)) return localPath;
@@ -513,6 +559,16 @@ export function renderDashboardHtml(
   html = html.replace('{{HUMIDITY}}', String(data.weather.humidity));
   html = html.replace('{{WIND_SPEED}}', String(data.weather.windSpeed));
   html = html.replace('{{PRECIP}}', String(data.weather.precipitationProbability));
+
+  // 2b. Google AI Pro / Antigravity subscription quota
+  const quota = data.subscriptionQuota;
+  const quotaProviderName = quota?.provider || 'GOOGLE AI PRO';
+  const quotaSync = quota?.fetchedAt
+    ? `SYNCED ${new Date(quota.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`
+    : 'OFFLINE';
+  html = html.replace(/{{QUOTA_PROVIDER}}/g, escapeHtml(quotaProviderName));
+  html = html.replace(/{{QUOTA_SYNC}}/g, escapeHtml(quotaSync));
+  html = html.replace(/{{QUOTA_WINDOWS_HTML}}/g, renderQuotaWindowsHtml(quota));
 
   // 3. TAB 1: Today's Schedule & This Week's Schedule + Tasks
   html = html.replace('{{DAY_PROGRESS_HTML}}', renderDayProgressHtml(data));

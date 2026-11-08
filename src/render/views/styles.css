@@ -550,6 +550,144 @@ body {
   text-overflow: ellipsis;
 }
 
+/* Google AI Pro Usage Limits (Compact 3-Column Quota Ledger) */
+.quota-card {
+  border: var(--border-thin);
+  border-radius: var(--radius-sharp);
+  padding: 6px 12px 7px;
+  background: var(--eink-white);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+.quota-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1.5px solid #000;
+  padding-bottom: 4px;
+  flex-shrink: 0;
+}
+
+.quota-title {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.quota-sync {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--eink-gray-dark);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.quota-window-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.quota-provider-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-right: 14px;
+}
+
+.quota-provider-col + .quota-provider-col {
+  border-left: 1px solid var(--eink-black);
+  padding-left: 14px;
+}
+
+.quota-provider-col:last-child {
+  padding-right: 0;
+}
+
+.quota-provider-name {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quota-window-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.quota-window-lbl {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.quota-bar {
+  flex: 1;
+  min-width: 0;
+  height: 11px;
+  border: 1.5px solid var(--eink-black);
+  border-radius: var(--radius-sharp);
+  background: var(--eink-white);
+  overflow: hidden;
+}
+
+.quota-bar-fill {
+  height: 100%;
+  background: var(--eink-black);
+}
+
+.quota-window-pct {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 900;
+  width: 34px;
+  text-align: right;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.quota-reset {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: var(--eink-gray-dark);
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quota-empty {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: var(--eink-gray-mid);
+  text-transform: uppercase;
+  padding: 6px 0;
+  text-align: center;
+}
+
 /* Active Session / Task Focus Card (Compact 2-Line Banner) */
 .agent-focus-box {
   border: var(--border-thin);
@@ -812,7 +950,7 @@ body {
 
 /* Row 2 (Full Width): Expanded 10-Week Activity Heatmap */
 .activity-section {
-  --hm-cell: clamp(20px, 2.4vh, 40px);
+  --hm-cell: clamp(20px, 2.2vh, 38px);
   --hm-gap: 6px;
   border: var(--border-thin);
   border-radius: var(--radius-sharp);
